@@ -1,0 +1,52 @@
+name: 'ecommerce'                    # Nome do projeto (mesmo do dbt init)
+version: '1.0.0'
+config-version: 2
+
+profile: 'ecommerce'                 # Deve bater com o nome no profiles.yml
+
+# Pastas do projeto
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuracoes de modelos por camada
+models:
+  ecommerce:                          # Deve bater com o name do projeto
+    bronze:
+      +materialized: view             # Views - sempre atualizadas, sem custo de storage
+      +schema: bronze                 # Schema: bronze
+      +tags: ["bronze", "raw"]
+      +meta:
+        modeling_layer: bronze
+
+    silver:
+      +materialized: table            # Tables - colunas calculadas persistidas
+      +schema: silver                 # Schema: silver
+      +tags: ["silver", "cleaned"]
+      +meta:
+        modeling_layer: silver
+
+    gold:
+      +materialized: table            # Tables - KPIs prontos para consumo
+      +tags: ["gold", "kpi", "metrics"]
+      +meta:
+        modeling_layer: gold
+      sales:
+        +schema: gold_sales           # Schema: gold_sales
+      customer_success:
+        +schema: gold_cs # Schema: gold_cs
+      pricing:
+        +schema: gold_pricing         # Schema: gold_pricing
+
+# Variaveis do projeto
+vars:
+  segmentacao_vip_threshold: 10000    # Receita minima para cliente VIP
+  segmentacao_top_tier_threshold: 5000 # Receita minima para TOP_TIER

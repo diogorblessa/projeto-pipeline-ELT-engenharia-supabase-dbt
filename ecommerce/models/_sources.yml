@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: raw                        # Nome logico (usado no {{ source() }})
+    description: "Tabelas brutas do banco de dados (fonte original)"
+    schema: public                    # Schema real onde as tabelas estao no PostgreSQL
+    tables:
+      - name: vendas
+        description: "Tabela de vendas realizadas"
+        columns:
+          - name: id_venda
+            description: "ID unico da venda"
+          - name: data_venda
+            description: "Data e hora da venda"
+          - name: id_cliente
+            description: "ID do cliente"
+          - name: id_produto
+            description: "ID do produto"
+          - name: canal_venda
+            description: "Canal de venda (ecommerce, loja_fisica)"
+          - name: quantidade
+            description: "Quantidade vendida"
+          - name: preco_unitario
+            description: "Preco unitario da venda"
+
+      - name: clientes
+        description: "Tabela de clientes cadastrados"
+        columns:
+          - name: id_cliente
+            description: "ID unico do cliente"
+          - name: nome_cliente
+            description: "Nome do cliente"
+          - name: estado
+            description: "Estado do cliente"
+          - name: pais
+            description: "Pais do cliente"
+          - name: data_cadastro
+            description: "Data de cadastro do cliente"
+
+      - name: produtos
+        description: "Tabela de produtos cadastrados"
+        columns:
+          - name: id_produto
+            description: "ID unico do produto"
+          - name: nome_produto
+            description: "Nome do produto"
+          - name: categoria
+            description: "Categoria do produto"
+          - name: marca
+            description: "Marca do produto"
+          - name: preco_atual
+            description: "Preco atual do produto"
+          - name: data_criacao
+            description: "Data de criacao do produto"
+
+      - name: preco_competidores
+        description: "Tabela de precos coletados de concorrentes"
+        columns:
+          - name: id_produto
+            description: "ID do produto"
+          - name: nome_concorrente
+            description: "Nome do concorrente"
+          - name: preco_concorrente
+            description: "Preco do concorrente"
+          - name: data_coleta
+            description: "Data de coleta do preco"
