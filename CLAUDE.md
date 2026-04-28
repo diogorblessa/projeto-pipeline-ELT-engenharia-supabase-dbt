@@ -25,6 +25,14 @@ uv sync --all-packages             # instala workspace inteiro em .venv/ na raiz
 cp .env.example .env               # criar .env e preencher com credenciais reais
 ```
 
+### Pipeline completo (atalho)
+
+```bash
+./scripts/run-pipeline.sh
+```
+
+Roda EL + dbt run em sequência. **Use sempre que possível.** O EL faz `DROP TABLE ... CASCADE` nas tabelas raw, o que apaga as views bronze; o `dbt run` logo em seguida reconstrói a cadeia bronze → silver → gold. Os comandos das próximas seções (Extract + Load e Transform separados) ficam para casos específicos: debug, runs seletivos, ou quando só uma das etapas precisa rodar.
+
 ### Extract + Load (Python)
 
 ```bash

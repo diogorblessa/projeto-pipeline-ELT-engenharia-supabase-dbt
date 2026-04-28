@@ -32,11 +32,17 @@ cp .env.example .env
 
 ## Rodar pipeline (host)
 
-```bash
-# Pipeline completo (EL + T sempre juntos):
-./scripts/run-pipeline.sh
+**Pipeline completo (recomendado):**
 
-# Ou separadamente:
+```bash
+./scripts/run-pipeline.sh
+```
+
+Roda Extract+Load e dbt run em sequência. Use este atalho no dia a dia — EL e T precisam rodar juntos porque o EL faz `DROP CASCADE` nas raw (apaga as views bronze) e o dbt run logo depois reconstrói a cadeia bronze→silver→gold.
+
+**Etapas separadas (para debug ou runs seletivos):**
+
+```bash
 # Extract + Load
 uv run --package extract_load python -m extract_load
 
