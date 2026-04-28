@@ -33,6 +33,10 @@ cp .env.example .env
 ## Rodar pipeline (host)
 
 ```bash
+# Pipeline completo (EL + T sempre juntos):
+./scripts/run-pipeline.sh
+
+# Ou separadamente:
 # Extract + Load
 uv run --package extract_load python -m extract_load
 
