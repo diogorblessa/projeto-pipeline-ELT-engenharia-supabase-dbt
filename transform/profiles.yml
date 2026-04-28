@@ -1,0 +1,14 @@
+ecommerce:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | as_number }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: "{{ env_var('POSTGRES_SCHEMA', 'public') }}"
+      threads: 4
+      keepalives_idle: 0
+      sslmode: "{{ env_var('POSTGRES_SSLMODE', 'require') }}"
