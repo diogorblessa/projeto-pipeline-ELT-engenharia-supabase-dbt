@@ -1,0 +1,24 @@
+services:
+  extract:
+    build:
+      context: .
+      dockerfile: extract_load/Dockerfile
+    image: projeto-elt-extract:latest
+    env_file:
+      - path: .env
+        required: false
+    restart: "no"
+
+  dbt:
+    build:
+      context: .
+      dockerfile: transform/Dockerfile
+    image: projeto-elt-dbt:latest
+    env_file:
+      - path: .env
+        required: false
+    restart: "no"
+    # OPCIONAL — descomentar para persistir artefatos do dbt entre runs:
+    # volumes:
+    #   - ./transform/target:/app/transform/target
+    #   - ./transform/logs:/app/transform/logs

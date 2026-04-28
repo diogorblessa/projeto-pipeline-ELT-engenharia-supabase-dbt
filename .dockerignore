@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# dbt
+transform/target
+transform/logs
+transform/dbt_packages
+
+# Docs / IDE / OS
+.vscode
+.idea
+.claude
+.llm
+docs
+*.md
+!README.md
+.DS_Store
+Thumbs.db

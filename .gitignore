@@ -24,13 +24,15 @@ target/
 dbt_packages/
 logs/
 .user.yml
-profiles.yml
+# profiles.yml NÃO é ignorado — versionamos transform/profiles.yml
+# (sem segredos, lê tudo via env_var())
 
 # Claude / IDE
 .claude/
 .vscode/
 .idea/
 *.swp
+docs/
 
 # OS
 .DS_Store
