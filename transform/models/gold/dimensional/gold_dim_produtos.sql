@@ -1,0 +1,9 @@
+SELECT
+    p.id_produto,
+    p.nome_produto,
+    p.categoria,
+    p.marca,
+    p.preco_atual,
+    p.faixa_preco,
+    p.data_criacao
+FROM {{ ref('silver_produtos') }} p
