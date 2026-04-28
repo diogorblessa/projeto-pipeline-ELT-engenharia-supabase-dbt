@@ -35,16 +35,27 @@ models:
         modeling_layer: silver
 
     gold:
-      +materialized: table            # Tables - KPIs prontos para consumo
-      +tags: ["gold", "kpi", "metrics"]
+      +materialized: table            # Tables - modelos analiticos prontos para consumo
+      +tags: ["gold"]
       +meta:
         modeling_layer: gold
-      sales:
-        +schema: gold_sales           # Schema: gold_sales
-      customer_success:
-        +schema: gold_cs # Schema: gold_cs
-      pricing:
-        +schema: gold_pricing         # Schema: gold_pricing
+
+      dimensional:
+        +schema: gold                 # Schema: public_gold
+        +tags: ["gold", "dimensional"]
+        +meta:
+          gold_role: dimensional
+
+      marts:
+        +tags: ["gold", "mart", "kpi", "metrics"]
+        +meta:
+          gold_role: mart
+        sales:
+          +schema: gold_sales         # Schema: public_gold_sales
+        customer_success:
+          +schema: gold_cs            # Schema: public_gold_cs
+        pricing:
+          +schema: gold_pricing       # Schema: public_gold_pricing
 
 # Variaveis do projeto
 vars:
