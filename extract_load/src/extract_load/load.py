@@ -25,13 +25,22 @@ def _build_url(settings: Settings) -> URL:
 
 
 def load(dfs: dict[str, pd.DataFrame], settings: Settings) -> None:
-    """Replace tables in `settings.postgres_schema` with the given DataFrames."""
+    """Replace tables in `settings.postgres_schema` with the given DataFrames.
+
+    Em PostgreSQL, faz DROP CASCADE antes do to_sql para remover views/tables
+    dependentes (camada bronze do dbt depende destas raw). O dbt run posterior
+    reconstroi a cadeia bronze -> silver -> gold.
+    """
     url = _build_url(settings)
     connect_args = {"sslmode": settings.postgres_sslmode}
     engine = create_engine(url, connect_args=connect_args)
+    cascade = "CASCADE" if engine.dialect.name == "postgresql" else ""
     try:
         for tabela, df in dfs.items():
             try:
+                with engine.begin() as conn:
+                    qualified = f"{settings.postgres_schema}.{tabela}"
+                    conn.execute(text(f"DROP TABLE IF EXISTS {qualified} {cascade}".strip()))
                 df.to_sql(
                     tabela,
                     engine,
