@@ -1,7 +1,6 @@
 import pytest
 from pydantic import ValidationError
 
-
 VALID_ENV = {
     "POSTGRES_HOST": "localhost",
     "POSTGRES_DB": "test",
@@ -18,8 +17,7 @@ VALID_ENV = {
 @pytest.fixture
 def clean_env(monkeypatch):
     """Garante env limpo, sem ler .env do projeto."""
-    for k in list(VALID_ENV.keys()) + ["POSTGRES_PORT", "POSTGRES_SCHEMA",
-                                        "POSTGRES_SSLMODE", "LOG_LEVEL"]:
+    for k in [*VALID_ENV, "POSTGRES_PORT", "POSTGRES_SCHEMA", "POSTGRES_SSLMODE", "LOG_LEVEL"]:
         monkeypatch.delenv(k, raising=False)
 
 

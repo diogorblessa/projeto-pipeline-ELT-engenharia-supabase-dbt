@@ -3,7 +3,6 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import StaticPool
 
-
 VALID_ENV_BASE = {
     "POSTGRES_HOST": "localhost",
     "POSTGRES_DB": "test",
@@ -44,7 +43,7 @@ def _make_settings(monkeypatch, **overrides):
     from extract_load.config import Settings
 
     env = {**VALID_ENV_BASE, **overrides}
-    for k in list(VALID_ENV_BASE.keys()) + ["POSTGRES_PORT", "POSTGRES_SSLMODE", "LOG_LEVEL"]:
+    for k in [*VALID_ENV_BASE, "POSTGRES_PORT", "POSTGRES_SSLMODE", "LOG_LEVEL"]:
         monkeypatch.delenv(k, raising=False)
     for k, v in env.items():
         monkeypatch.setenv(k, v)

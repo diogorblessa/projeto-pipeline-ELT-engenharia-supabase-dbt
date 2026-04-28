@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-
 VALID_ENV = {
     "POSTGRES_HOST": "localhost",
     "POSTGRES_DB": "test",
@@ -27,8 +26,7 @@ def _parquet_bytes(df: pd.DataFrame) -> bytes:
 def _make_settings(monkeypatch):
     from extract_load.config import Settings
 
-    for k in list(VALID_ENV.keys()) + ["POSTGRES_PORT", "POSTGRES_SCHEMA",
-                                        "POSTGRES_SSLMODE", "LOG_LEVEL"]:
+    for k in [*VALID_ENV, "POSTGRES_PORT", "POSTGRES_SCHEMA", "POSTGRES_SSLMODE", "LOG_LEVEL"]:
         monkeypatch.delenv(k, raising=False)
     for k, v in VALID_ENV.items():
         monkeypatch.setenv(k, v)
@@ -73,13 +71,12 @@ def test_extract_passes_credentials_to_boto3(mock_boto, monkeypatch):
     assert kwargs["region_name"] == "us-east-1"
     assert kwargs["endpoint_url"] == "https://example.com"
     assert kwargs["aws_access_key_id"] == "key"
-    assert kwargs["aws_secret_access_key"] == "secret"
+    assert kwargs["aws_secret_access_key"] == "secret"  # noqa: S105 (literal de teste)
 
 
 @patch("extract_load.extract.boto3.client")
 def test_extract_raises_extract_error_on_s3_failure(mock_boto, monkeypatch):
     from botocore.exceptions import ClientError
-
     from extract_load.extract import ExtractError, extract
 
     mock_s3 = MagicMock()
