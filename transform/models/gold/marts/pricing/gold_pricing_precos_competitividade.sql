@@ -5,23 +5,25 @@ WITH precos_por_produto AS (
         p.categoria,
         p.marca,
         p.preco_atual AS nosso_preco,
-        AVG(pc.preco_concorrente) AS preco_medio_concorrentes,
-        MIN(pc.preco_concorrente) AS preco_minimo_concorrentes,
-        MAX(pc.preco_concorrente) AS preco_maximo_concorrentes,
-        COUNT(DISTINCT pc.nome_concorrente) AS total_concorrentes
-    FROM {{ ref('silver_produtos') }} p
-    LEFT JOIN {{ ref('silver_preco_competidores') }} pc
-        ON p.id_produto = pc.id_produto
+        AVG(fp.preco_concorrente) AS preco_medio_concorrentes,
+        MIN(fp.preco_concorrente) AS preco_minimo_concorrentes,
+        MAX(fp.preco_concorrente) AS preco_maximo_concorrentes,
+        COUNT(DISTINCT fp.concorrente_key) AS total_concorrentes
+    FROM {{ ref('gold_dim_produtos') }} p
+    LEFT JOIN {{ ref('gold_fct_precos_competidores') }} fp
+        ON p.id_produto = fp.id_produto
+    LEFT JOIN {{ ref('gold_dim_concorrentes') }} c
+        ON fp.concorrente_key = c.concorrente_key
     GROUP BY p.id_produto, p.nome_produto, p.categoria, p.marca, p.preco_atual
 ),
 
 vendas_por_produto AS (
     SELECT
-        v.id_produto,
-        SUM(v.receita_total) AS receita_total,
-        SUM(v.quantidade) AS quantidade_total
-    FROM {{ ref('silver_vendas') }} v
-    GROUP BY v.id_produto
+        f.id_produto,
+        SUM(f.receita_total) AS receita_total,
+        SUM(f.quantidade) AS quantidade_total
+    FROM {{ ref('gold_fct_vendas') }} f
+    GROUP BY f.id_produto
 )
 
 SELECT

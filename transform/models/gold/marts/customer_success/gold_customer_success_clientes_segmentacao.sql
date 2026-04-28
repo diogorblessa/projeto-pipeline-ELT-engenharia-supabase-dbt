@@ -1,17 +1,17 @@
 WITH receita_por_cliente AS (
     SELECT
-        v.id_cliente,
+        f.id_cliente,
         c.nome_cliente,
         c.estado,
-        SUM(v.receita_total) AS receita_total,
-        COUNT(DISTINCT v.id_venda) AS total_compras,
-        AVG(v.receita_total) AS ticket_medio,
-        MIN(v.data_da_venda) AS primeira_compra,
-        MAX(v.data_da_venda) AS ultima_compra
-    FROM {{ ref('silver_vendas') }} v
-    LEFT JOIN {{ ref('silver_clientes') }} c
-        ON v.id_cliente = c.id_cliente
-    GROUP BY v.id_cliente, c.nome_cliente, c.estado
+        SUM(f.receita_total) AS receita_total,
+        COUNT(DISTINCT f.id_venda) AS total_compras,
+        AVG(f.receita_total) AS ticket_medio,
+        MIN(f.data_venda) AS primeira_compra,
+        MAX(f.data_venda) AS ultima_compra
+    FROM {{ ref('gold_fct_vendas') }} f
+    LEFT JOIN {{ ref('gold_dim_clientes') }} c
+        ON f.id_cliente = c.id_cliente
+    GROUP BY f.id_cliente, c.nome_cliente, c.estado
 )
 
 SELECT
