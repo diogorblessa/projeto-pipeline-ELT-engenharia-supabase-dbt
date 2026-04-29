@@ -126,3 +126,10 @@ models:
         tests:
           - unique
           - not_null
+      - name: sem_dados_concorrente
+        description: "True quando o produto nao possui dados de concorrentes para comparacao."
+      - name: classificacao_preco
+        description: "Posicionamento do preco proprio em relacao aos concorrentes."
+        tests:
+          - accepted_values:
+              values: ['MAIS_CARO_QUE_TODOS', 'MAIS_BARATO_QUE_TODOS', 'ACIMA_DA_MEDIA', 'ABAIXO_DA_MEDIA', 'NA_MEDIA', 'SEM_DADOS']

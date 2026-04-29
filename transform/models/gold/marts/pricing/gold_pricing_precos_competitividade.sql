@@ -36,6 +36,7 @@ SELECT
     pp.preco_minimo_concorrentes,
     pp.preco_maximo_concorrentes,
     pp.total_concorrentes,
+    pp.preco_medio_concorrentes IS NULL                                              AS sem_dados_concorrente,
     CASE
         WHEN pp.preco_medio_concorrentes = 0 THEN NULL
         ELSE ((pp.nosso_preco - pp.preco_medio_concorrentes) / pp.preco_medio_concorrentes) * 100
@@ -45,10 +46,12 @@ SELECT
         ELSE ((pp.nosso_preco - pp.preco_minimo_concorrentes) / pp.preco_minimo_concorrentes) * 100
     END AS diferenca_percentual_vs_minimo,
     CASE
+        WHEN pp.nosso_preco IS NULL
+          OR pp.preco_medio_concorrentes IS NULL THEN 'SEM_DADOS'
         WHEN pp.nosso_preco > pp.preco_maximo_concorrentes THEN 'MAIS_CARO_QUE_TODOS'
         WHEN pp.nosso_preco < pp.preco_minimo_concorrentes THEN 'MAIS_BARATO_QUE_TODOS'
-        WHEN pp.nosso_preco > pp.preco_medio_concorrentes THEN 'ACIMA_DA_MEDIA'
-        WHEN pp.nosso_preco < pp.preco_medio_concorrentes THEN 'ABAIXO_DA_MEDIA'
+        WHEN pp.nosso_preco > pp.preco_medio_concorrentes  THEN 'ACIMA_DA_MEDIA'
+        WHEN pp.nosso_preco < pp.preco_medio_concorrentes  THEN 'ABAIXO_DA_MEDIA'
         ELSE 'NA_MEDIA'
     END AS classificacao_preco,
     COALESCE(vp.receita_total, 0) AS receita_total,
@@ -56,5 +59,4 @@ SELECT
 FROM precos_por_produto pp
 LEFT JOIN vendas_por_produto vp
     ON pp.id_produto = vp.id_produto
-WHERE pp.preco_medio_concorrentes IS NOT NULL
-ORDER BY diferenca_percentual_vs_media DESC
+ORDER BY diferenca_percentual_vs_media DESC NULLS LAST
