@@ -17,6 +17,10 @@ Pipeline ELT de analytics para e-commerce usando Python (extração + carga) e d
 
 ## Comandos Principais
 
+### Conveção de Commits
+
+Ler o arquivo `COMMIT_GUIDELINES.md` sempre que for realizar um git commit
+
 ### Setup inicial
 
 ```bash
@@ -182,6 +186,9 @@ Script Python que consulta os 3 data marts gold no PostgreSQL, envia os dados pa
 - Tratar erros de conexão antes de chamar a API
 - Salvar relatório como `.md` com data no nome do arquivo
 - Logging com timestamps em cada etapa
+
+# Commits
+- Commit semântico com breve descrição explicativa e com acentuação correta.
 
 ## Extensões Planejadas (ver `.llm/`)
 
