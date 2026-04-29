@@ -48,6 +48,6 @@ SELECT
     EXTRACT(MONTH FROM data_venda) AS mes_venda,
     EXTRACT(DAY FROM data_venda) AS dia_venda,
     EXTRACT(DOW FROM data_venda) AS dia_semana,
-    TO_CHAR(data_venda, 'HH24:MI') AS hora_venda
+    EXTRACT(HOUR FROM data_venda)::integer AS hora_venda
 FROM vendas_validas
 WHERE ordem = 1
