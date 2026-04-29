@@ -48,6 +48,7 @@ SELECT
     EXTRACT(MONTH FROM data_venda) AS mes_venda,
     EXTRACT(DAY FROM data_venda) AS dia_venda,
     EXTRACT(DOW FROM data_venda) AS dia_semana,
-    EXTRACT(HOUR FROM data_venda)::integer AS hora_venda
+    EXTRACT(HOUR FROM data_venda)::integer AS hora_venda,
+    current_timestamp AS silver_processado_em
 FROM vendas_validas
 WHERE ordem = 1

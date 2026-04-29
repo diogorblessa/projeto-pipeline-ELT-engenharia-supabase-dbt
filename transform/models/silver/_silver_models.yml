@@ -21,6 +21,8 @@ models:
         description: "Pais do cliente padronizado."
         tests:
           - not_null
+      - name: silver_processado_em
+        description: "Timestamp de quando o dbt materializou esta tabela (auditoria de pipeline)."
 
   - name: silver_produtos
     description: "Catalogo de produtos conformado, incluindo produtos inferidos a partir de fatos."
@@ -54,6 +56,8 @@ models:
           - not_null
           - accepted_values:
               values: ['CADASTRADO', 'INFERIDO']
+      - name: silver_processado_em
+        description: "Timestamp de quando o dbt materializou esta tabela (auditoria de pipeline)."
 
   - name: silver_vendas
     description: "Vendas limpas e tipadas, preservando uma linha por venda valida."
@@ -99,6 +103,8 @@ models:
         description: "Receita calculada como quantidade vezes preco unitario."
         tests:
           - not_null
+      - name: silver_processado_em
+        description: "Timestamp de quando o dbt materializou esta tabela (auditoria de pipeline)."
 
   - name: silver_preco_competidores
     description: "Precos de concorrentes limpos, tipados e deduplicados."
@@ -127,3 +133,5 @@ models:
         description: "Data da coleta convertida para date."
         tests:
           - not_null
+      - name: silver_processado_em
+        description: "Timestamp de quando o dbt materializou esta tabela (auditoria de pipeline)."

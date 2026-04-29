@@ -24,6 +24,7 @@ SELECT
     nome_cliente,
     estado,
     pais,
-    data_cadastro
+    data_cadastro,
+    current_timestamp AS silver_processado_em
 FROM clientes_deduplicados
 WHERE ordem = 1

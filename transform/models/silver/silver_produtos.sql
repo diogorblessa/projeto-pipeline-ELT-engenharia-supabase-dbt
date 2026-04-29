@@ -77,7 +77,8 @@ SELECT
     preco_atual,
     data_criacao,
     faixa_preco,
-    status_cadastro
+    status_cadastro,
+    current_timestamp AS silver_processado_em
 FROM produtos_cadastrados
 
 UNION ALL
@@ -90,5 +91,6 @@ SELECT
     preco_atual,
     data_criacao,
     faixa_preco,
-    status_cadastro
+    status_cadastro,
+    current_timestamp AS silver_processado_em
 FROM produtos_inferidos

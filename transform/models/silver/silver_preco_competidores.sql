@@ -39,6 +39,7 @@ SELECT
     nome_concorrente,
     preco_concorrente,
     data_coleta,
-    data_da_coleta
+    data_da_coleta,
+    current_timestamp AS silver_processado_em
 FROM precos_validos
 WHERE ordem = 1
