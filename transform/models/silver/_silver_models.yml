@@ -1,0 +1,129 @@
+version: 2
+
+models:
+  - name: silver_clientes
+    description: "Clientes limpos e conformados para consumo analitico."
+    columns:
+      - name: id_cliente
+        description: "Chave unica do cliente."
+        tests:
+          - unique
+          - not_null
+      - name: nome_cliente
+        description: "Nome do cliente padronizado."
+        tests:
+          - not_null
+      - name: estado
+        description: "UF do cliente padronizada."
+        tests:
+          - not_null
+      - name: pais
+        description: "Pais do cliente padronizado."
+        tests:
+          - not_null
+
+  - name: silver_produtos
+    description: "Catalogo de produtos conformado, incluindo produtos inferidos a partir de fatos."
+    columns:
+      - name: id_produto
+        description: "Chave unica do produto."
+        tests:
+          - unique
+          - not_null
+      - name: nome_produto
+        description: "Nome do produto ou marcador de cadastro ausente."
+        tests:
+          - not_null
+      - name: categoria
+        description: "Categoria padronizada do produto."
+        tests:
+          - not_null
+      - name: marca
+        description: "Marca padronizada do produto."
+        tests:
+          - not_null
+      - name: faixa_preco
+        description: "Faixa de preco derivada da regra de negocio."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PREMIUM', 'MEDIO', 'BASICO', 'NAO_INFORMADO']
+      - name: status_cadastro
+        description: "Indica se o produto veio do catalogo ou foi inferido por uso em fatos."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CADASTRADO', 'INFERIDO']
+
+  - name: silver_vendas
+    description: "Vendas limpas e tipadas, preservando uma linha por venda valida."
+    columns:
+      - name: id_venda
+        description: "Chave unica da venda."
+        tests:
+          - unique
+          - not_null
+      - name: id_cliente
+        description: "Chave estrangeira logica para clientes."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_clientes')
+              field: id_cliente
+      - name: id_produto
+        description: "Chave estrangeira logica para produtos conformados."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_produtos')
+              field: id_produto
+      - name: data_da_venda
+        description: "Data da venda convertida para date."
+        tests:
+          - not_null
+      - name: canal_venda
+        description: "Canal de venda padronizado."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ecommerce', 'loja_fisica']
+      - name: quantidade
+        description: "Quantidade vendida tipada como inteiro."
+        tests:
+          - not_null
+      - name: preco_unitario
+        description: "Preco unitario tipado como numeric."
+        tests:
+          - not_null
+      - name: receita_total
+        description: "Receita calculada como quantidade vezes preco unitario."
+        tests:
+          - not_null
+
+  - name: silver_preco_competidores
+    description: "Precos de concorrentes limpos, tipados e deduplicados."
+    columns:
+      - name: preco_competidor_key
+        description: "Chave tecnica da medicao de preco por produto, concorrente e data."
+        tests:
+          - unique
+          - not_null
+      - name: id_produto
+        description: "Chave estrangeira logica para produtos conformados."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('silver_produtos')
+              field: id_produto
+      - name: nome_concorrente
+        description: "Nome do concorrente padronizado."
+        tests:
+          - not_null
+      - name: preco_concorrente
+        description: "Preco do concorrente tipado como numeric."
+        tests:
+          - not_null
+      - name: data_da_coleta
+        description: "Data da coleta convertida para date."
+        tests:
+          - not_null

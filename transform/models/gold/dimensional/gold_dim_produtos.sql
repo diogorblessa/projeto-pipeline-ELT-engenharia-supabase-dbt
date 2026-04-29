@@ -5,5 +5,6 @@ SELECT
     p.marca,
     p.preco_atual,
     p.faixa_preco,
+    p.status_cadastro,
     p.data_criacao
 FROM {{ ref('silver_produtos') }} p

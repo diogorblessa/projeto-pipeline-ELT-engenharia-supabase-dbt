@@ -1,0 +1,128 @@
+version: 2
+
+models:
+  - name: gold_dim_clientes
+    description: "Dimensao de clientes para a camada Gold."
+    columns:
+      - name: id_cliente
+        description: "Chave unica do cliente."
+        tests:
+          - unique
+          - not_null
+
+  - name: gold_dim_produtos
+    description: "Dimensao de produtos para a camada Gold."
+    columns:
+      - name: id_produto
+        description: "Chave unica do produto."
+        tests:
+          - unique
+          - not_null
+
+  - name: gold_dim_datas
+    description: "Dimensao de datas unificada para vendas e coletas de preco."
+    columns:
+      - name: data
+        description: "Data calendario usada pelos fatos."
+        tests:
+          - unique
+          - not_null
+
+  - name: gold_dim_concorrentes
+    description: "Dimensao de concorrentes para analises de pricing."
+    columns:
+      - name: concorrente_key
+        description: "Chave tecnica deterministica do concorrente."
+        tests:
+          - unique
+          - not_null
+      - name: nome_concorrente
+        description: "Nome original do concorrente."
+        tests:
+          - not_null
+
+  - name: gold_fct_vendas
+    description: "Fato principal de vendas, com uma linha por venda."
+    columns:
+      - name: id_venda
+        description: "Chave unica da venda."
+        tests:
+          - unique
+          - not_null
+      - name: id_cliente
+        description: "Chave estrangeira logica para gold_dim_clientes."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_clientes')
+              field: id_cliente
+      - name: id_produto
+        description: "Chave estrangeira logica para gold_dim_produtos."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_produtos')
+              field: id_produto
+      - name: data_venda
+        description: "Data da venda relacionada a gold_dim_datas."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_datas')
+              field: data
+
+  - name: gold_fct_precos_competidores
+    description: "Fato auxiliar de precos de concorrentes por produto, concorrente e data."
+    columns:
+      - name: preco_competidor_key
+        description: "Chave tecnica unica da medicao de preco."
+        tests:
+          - unique
+          - not_null
+      - name: id_produto
+        description: "Chave estrangeira logica para gold_dim_produtos."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_produtos')
+              field: id_produto
+      - name: concorrente_key
+        description: "Chave estrangeira logica para gold_dim_concorrentes."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_concorrentes')
+              field: concorrente_key
+      - name: data_da_coleta
+        description: "Data da coleta relacionada a gold_dim_datas."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gold_dim_datas')
+              field: data
+
+  - name: gold_sales_vendas_temporais
+    description: "Data mart Gold de vendas temporais para a area comercial."
+    columns:
+      - name: data_venda
+        description: "Data agregada da venda."
+        tests:
+          - not_null
+
+  - name: gold_customer_success_clientes_segmentacao
+    description: "Data mart Gold de segmentacao de clientes para Customer Success."
+    columns:
+      - name: cliente_id
+        description: "Identificador unico do cliente no mart."
+        tests:
+          - unique
+          - not_null
+
+  - name: gold_pricing_precos_competitividade
+    description: "Data mart Gold de competitividade de precos para Pricing."
+    columns:
+      - name: produto_id
+        description: "Identificador unico do produto no mart."
+        tests:
+          - unique
+          - not_null
