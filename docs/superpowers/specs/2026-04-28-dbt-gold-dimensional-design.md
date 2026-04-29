@@ -19,16 +19,16 @@ A etapa dbt ja usa arquitetura medalhao:
 bronze -> silver -> gold
 ```
 
-Estado atual da camada Gold:
+Estado alvo da camada Gold apos o refinamento:
 
 ```text
 transform/models/gold/
-  sales/
-    vendas_temporais.sql
-  customer_success/
-    clientes_segmentacao.sql
-  pricing/
-    precos_competitividade.sql
+  marts/sales/
+    gold_sales_vendas_temporais.sql
+  marts/customer_success/
+    gold_customer_success_clientes_segmentacao.sql
+  marts/pricing/
+    gold_pricing_precos_competitividade.sql
 ```
 
 Esses tres modelos sao data marts agregados por pergunta de negocio. Eles atendem ao consumo inicial, mas ainda nao deixam explicita uma base dimensional reutilizavel para os proximos projetos (`case-01-dashboard` e `case-02-telegram`).
@@ -529,15 +529,7 @@ docs/superpowers/plans/2026-04-28-reorganizacao-elt.md
 docs/superpowers/specs/2026-04-28-reorganizacao-elt-design.md
 ```
 
-Padrao antigo a substituir:
-
-```text
-public_gold_sales.vendas_temporais
-public_gold_cs.clientes_segmentacao
-public_gold_pricing.precos_competitividade
-```
-
-Padrao novo:
+Padrao final adotado:
 
 ```text
 public_gold_sales.gold_sales_vendas_temporais
@@ -618,10 +610,7 @@ Os cases 01 e 02 devem consumir apenas os marts finais, salvo necessidade explic
 1. `dbt parse` executa sem erro.
 2. `dbt run` cria os modelos Bronze, Silver, Gold dimensional e Gold marts.
 3. `dbt test` valida chaves e relacionamentos definidos em `_gold_models.yml`.
-4. Nao existem mais modelos Gold finais com os nomes antigos:
-   - `vendas_temporais`
-   - `clientes_segmentacao`
-   - `precos_competitividade`
+4. Nao existem mais modelos Gold finais sem prefixo `gold_*`.
 5. Os novos marts finais existem com nomes `gold_*`.
 6. `README.md`, `CLAUDE.md`, `transform/PRD-dbt.md` e `.llm/*` mencionam os novos nomes.
 7. Os proximos cases usam:
@@ -641,4 +630,3 @@ Apos aprovacao desta spec, a proxima etapa e criar um plano de implementacao det
 4. Criar `_gold_models.yml` com testes.
 5. Atualizar documentacao e referencias `.llm`.
 6. Rodar validacoes dbt.
-
