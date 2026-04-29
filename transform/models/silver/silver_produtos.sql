@@ -29,9 +29,9 @@ produtos_cadastrados AS (
         preco_atual,
         data_criacao,
         CASE
-            WHEN preco_atual IS NULL THEN 'NAO_INFORMADO'
-            WHEN preco_atual > 1000 THEN 'PREMIUM'
-            WHEN preco_atual > 500 THEN 'MEDIO'
+            WHEN preco_atual IS NULL                                         THEN 'NAO_INFORMADO'
+            WHEN preco_atual > {{ var('faixa_produto_premium_min', 1000) }} THEN 'PREMIUM'
+            WHEN preco_atual > {{ var('faixa_produto_medio_min', 500) }}    THEN 'MEDIO'
             ELSE 'BASICO'
         END AS faixa_preco,
         'CADASTRADO' AS status_cadastro

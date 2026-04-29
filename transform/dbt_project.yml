@@ -59,5 +59,9 @@ models:
 
 # Variaveis do projeto
 vars:
-  segmentacao_vip_threshold: 10000    # Receita minima para cliente VIP
-  segmentacao_top_tier_threshold: 5000 # Receita minima para TOP_TIER
+  segmentacao_vip_threshold: 10000
+  segmentacao_top_tier_threshold: 5000
+  faixa_venda_barato_max: 100
+  faixa_venda_medio_max: 500
+  faixa_produto_premium_min: 1000
+  faixa_produto_medio_min: 500

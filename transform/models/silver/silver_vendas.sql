@@ -39,8 +39,8 @@ SELECT
     preco_unitario,
     quantidade * preco_unitario AS receita_total,
     CASE
-        WHEN preco_unitario < 100 THEN 'barato'
-        WHEN preco_unitario <= 500 THEN 'medio'
+        WHEN preco_unitario < {{ var('faixa_venda_barato_max', 100) }} THEN 'barato'
+        WHEN preco_unitario <= {{ var('faixa_venda_medio_max', 500) }} THEN 'medio'
         ELSE 'caro'
     END AS faixa_preco,
     DATE(data_venda) AS data_da_venda,
