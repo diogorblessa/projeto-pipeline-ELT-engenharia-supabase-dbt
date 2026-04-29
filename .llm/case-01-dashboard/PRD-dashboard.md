@@ -14,9 +14,9 @@ Dashboard para 3 diretores de um e-commerce consumirem os Data Marts gold do ban
 ```
 Supabase (PostgreSQL)
     │
-    ├── public_gold_sales.vendas_temporais
-    ├── public_gold_cs.clientes_segmentacao
-    └── public_gold_pricing.precos_competitividade
+    ├── public_gold_sales.gold_sales_vendas_temporais
+    ├── public_gold_cs.gold_customer_success_clientes_segmentacao
+    └── public_gold_pricing.gold_pricing_precos_competitividade
             │
             ▼
     Streamlit App (app.py)
@@ -64,7 +64,7 @@ Criar funcao de conexao reutilizavel que retorne um `pandas.DataFrame` a partir 
 
 ### Pagina 1: Vendas (Diretor Comercial)
 
-**Tabela fonte:** `public_gold_sales.vendas_temporais`
+**Tabela fonte:** `public_gold_sales.gold_sales_vendas_temporais`
 
 **KPIs no topo (metricas grandes com st.metric):**
 
@@ -101,7 +101,7 @@ Mostrar os 4 KPIs em uma linha usando `st.columns(4)`.
 
 ### Pagina 2: Clientes (Diretora de Customer Success)
 
-**Tabela fonte:** `public_gold_cs.clientes_segmentacao`
+**Tabela fonte:** `public_gold_cs.gold_customer_success_clientes_segmentacao`
 
 **KPIs no topo (st.metric):**
 
@@ -147,7 +147,7 @@ Mostrar os 4 KPIs em uma linha usando `st.columns(4)`.
 
 ### Pagina 3: Pricing (Diretor de Pricing)
 
-**Tabela fonte:** `public_gold_pricing.precos_competitividade`
+**Tabela fonte:** `public_gold_pricing.gold_pricing_precos_competitividade`
 
 **KPIs no topo (st.metric):**
 

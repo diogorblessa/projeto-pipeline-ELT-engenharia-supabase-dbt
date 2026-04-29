@@ -20,9 +20,9 @@ Sistema completo de inteligência de dados para e-commerce via Telegram com 3 ca
 ```
 Supabase (PostgreSQL)
     │
-    ├── public_gold_sales.vendas_temporais
-    ├── public_gold_cs.clientes_segmentacao
-    └── public_gold_pricing.precos_competitividade
+    ├── public_gold_sales.gold_sales_vendas_temporais
+    ├── public_gold_cs.gold_customer_success_clientes_segmentacao
+    └── public_gold_pricing.gold_pricing_precos_competitividade
             │
             ▼
     db.py (conexão SQLAlchemy + executor de queries)
@@ -165,7 +165,7 @@ SELECT data_venda, dia_semana_nome,
     SUM(total_vendas) AS vendas,
     SUM(total_clientes_unicos) AS clientes,
     AVG(ticket_medio) AS ticket_medio
-FROM public_gold_sales.vendas_temporais
+FROM public_gold_sales.gold_sales_vendas_temporais
 GROUP BY data_venda, dia_semana_nome
 ORDER BY data_venda DESC
 LIMIT 7
@@ -179,7 +179,7 @@ SELECT segmento_cliente,
     SUM(receita_total) AS receita_total,
     AVG(ticket_medio) AS ticket_medio_avg,
     AVG(total_compras) AS compras_avg
-FROM public_gold_cs.clientes_segmentacao
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
 GROUP BY segmento_cliente
 ORDER BY receita_total DESC
 ```
@@ -191,7 +191,7 @@ SELECT classificacao_preco,
     COUNT(*) AS total_produtos,
     AVG(diferenca_percentual_vs_media) AS dif_media_pct,
     SUM(receita_total) AS receita_impactada
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 GROUP BY classificacao_preco
 ORDER BY total_produtos DESC
 ```
@@ -203,7 +203,7 @@ SELECT nome_produto, categoria, nosso_preco,
     preco_medio_concorrentes,
     diferenca_percentual_vs_media,
     receita_total
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 WHERE classificacao_preco = 'MAIS_CARO_QUE_TODOS'
 ORDER BY diferenca_percentual_vs_media DESC
 LIMIT 10

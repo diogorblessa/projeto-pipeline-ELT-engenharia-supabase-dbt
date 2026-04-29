@@ -44,7 +44,7 @@ Baseado em: `PRD-dashboard.md` (requisitos funcionais) e `database.md` (schemas,
 
 ## F-02 — Página: Vendas (Diretor Comercial)
 
-**Tabela:** `public_gold_sales.vendas_temporais`
+**Tabela:** `public_gold_sales.gold_sales_vendas_temporais`
 **Granularidade:** 1 linha por `data_venda` + `hora_venda`
 
 ### Filtro
@@ -71,7 +71,7 @@ Baseado em: `PRD-dashboard.md` (requisitos funcionais) e `database.md` (schemas,
 
 ## F-03 — Página: Clientes (Diretora de Customer Success)
 
-**Tabela:** `public_gold_cs.clientes_segmentacao`
+**Tabela:** `public_gold_cs.gold_customer_success_clientes_segmentacao`
 **Granularidade:** 1 linha por cliente
 
 ### KPIs — `st.columns(4)`
@@ -100,7 +100,7 @@ Baseado em: `PRD-dashboard.md` (requisitos funcionais) e `database.md` (schemas,
 
 ## F-04 — Página: Pricing (Diretor de Pricing)
 
-**Tabela:** `public_gold_pricing.precos_competitividade`
+**Tabela:** `public_gold_pricing.gold_pricing_precos_competitividade`
 **Granularidade:** 1 linha por produto (somente produtos com dados de concorrentes)
 
 ### Filtro

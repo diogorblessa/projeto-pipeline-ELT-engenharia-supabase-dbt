@@ -10,7 +10,7 @@
 | Propriedade | Valor |
 |---|---|
 | **Banco de Dados** | PostgreSQL (Supabase) |
-| **Arquitetura** | Medalhão (Bronze → Silver → Gold) |
+| **Arquitetura** | Medalhão (Bronze -> Silver conformada -> Gold dimensional -> Gold marts) |
 | **Ferramenta de Modelagem** | dbt |
 | **Materialização Gold** | `table` |
 | **Total de Data Marts** | 3 |
@@ -19,9 +19,20 @@
 
 | # | Schema | Tabela | Domínio | Objetivo |
 |---|---|---|---|---|
-| 1 | `public_gold_sales` | `vendas_temporais` | Vendas | Métricas de vendas agregadas por dia/hora |
-| 2 | `public_gold` | `clientes_segmentacao` | Customer Success | Segmentação de clientes por receita (RFM simplificado) |
-| 3 | `public_gold` | `precos_competitividade` | Pricing | Análise de competitividade de preços vs concorrentes |
+| 1 | `public_gold_sales` | `gold_sales_vendas_temporais` | Vendas | Métricas de vendas agregadas por dia/hora |
+| 2 | `public_gold_cs` | `gold_customer_success_clientes_segmentacao` | Customer Success | Segmentação de clientes por receita (RFM simplificado) |
+| 3 | `public_gold_pricing` | `gold_pricing_precos_competitividade` | Pricing | Análise de competitividade de preços vs concorrentes |
+
+### Base dimensional disponivel
+
+- `public_gold.gold_dim_clientes`
+- `public_gold.gold_dim_produtos`
+- `public_gold.gold_dim_datas`
+- `public_gold.gold_dim_concorrentes`
+- `public_gold.gold_fct_vendas`
+- `public_gold.gold_fct_precos_competidores`
+
+Dashboards e agentes devem consumir preferencialmente os marts finais em `public_gold_sales`, `public_gold_cs` e `public_gold_pricing`.
 
 ### Fluxo de dados (Lineage)
 
@@ -43,7 +54,7 @@
      ▼            ▼                 ▼               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │ GOLD (tables - KPIs prontos para consumo)                           │
-│ vendas_temporais │ clientes_segmentacao │ precos_competitividade     │
+│ gold_sales_vendas_temporais │ gold_customer_success_clientes_segmentacao │ gold_pricing_precos_competitividade     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -58,7 +69,7 @@
 
 ---
 
-## Data Mart 1: `vendas_temporais`
+## Data Mart 1: `gold_sales_vendas_temporais`
 
 ### Metadados
 
@@ -155,7 +166,7 @@ ORDER BY data_venda DESC, v.hora_venda
 SELECT ano_venda, mes_venda,
        SUM(receita_total) AS receita_mensal,
        SUM(total_vendas) AS vendas_mensal
-FROM public_gold_sales.vendas_temporais
+FROM public_gold_sales.gold_sales_vendas_temporais
 GROUP BY ano_venda, mes_venda
 ORDER BY ano_venda, mes_venda;
 
@@ -163,7 +174,7 @@ ORDER BY ano_venda, mes_venda;
 SELECT hora_venda,
        SUM(receita_total) AS receita,
        SUM(total_vendas) AS vendas
-FROM public_gold_sales.vendas_temporais
+FROM public_gold_sales.gold_sales_vendas_temporais
 GROUP BY hora_venda
 ORDER BY receita DESC
 LIMIT 5;
@@ -173,13 +184,13 @@ SELECT
     CASE WHEN dia_semana_nome IN ('Sábado', 'Domingo') THEN 'Fim de Semana' ELSE 'Dia Útil' END AS tipo_dia,
     SUM(receita_total) AS receita,
     AVG(ticket_medio) AS ticket_medio
-FROM public_gold_sales.vendas_temporais
+FROM public_gold_sales.gold_sales_vendas_temporais
 GROUP BY 1;
 ```
 
 ---
 
-## Data Mart 2: `clientes_segmentacao`
+## Data Mart 2: `gold_customer_success_clientes_segmentacao`
 
 ### Metadados
 
@@ -306,14 +317,14 @@ SELECT segmento_cliente,
        SUM(receita_total) AS receita_total,
        AVG(ticket_medio) AS ticket_medio_avg,
        AVG(total_compras) AS compras_avg
-FROM public_gold_cs.clientes_segmentacao
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
 GROUP BY segmento_cliente
 ORDER BY receita_total DESC;
 
 -- Top 10 clientes por receita
 SELECT cliente_id, nome_cliente, estado,
        receita_total, total_compras, segmento_cliente
-FROM public_gold_cs.clientes_segmentacao
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
 WHERE ranking_receita <= 10;
 
 -- Receita por estado
@@ -321,21 +332,21 @@ SELECT estado,
        COUNT(*) AS total_clientes,
        SUM(receita_total) AS receita_total,
        COUNT(*) FILTER (WHERE segmento_cliente = 'VIP') AS clientes_vip
-FROM public_gold_cs.clientes_segmentacao
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
 GROUP BY estado
 ORDER BY receita_total DESC;
 
 -- Clientes próximos de upgrade para VIP
 SELECT cliente_id, nome_cliente, receita_total,
        10000 - receita_total AS falta_para_vip
-FROM public_gold_cs.clientes_segmentacao
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
 WHERE segmento_cliente = 'TOP_TIER'
 ORDER BY receita_total DESC;
 ```
 
 ---
 
-## Data Mart 3: `precos_competitividade`
+## Data Mart 3: `gold_pricing_precos_competitividade`
 
 ### Metadados
 
@@ -487,7 +498,7 @@ SELECT classificacao_preco,
        COUNT(*) AS total_produtos,
        AVG(diferenca_percentual_vs_media) AS dif_media_pct,
        SUM(receita_total) AS receita_total
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 GROUP BY classificacao_preco
 ORDER BY total_produtos DESC;
 
@@ -496,7 +507,7 @@ SELECT produto_id, nome_produto, categoria, marca,
        nosso_preco, preco_medio_concorrentes,
        diferenca_percentual_vs_media,
        receita_total
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 ORDER BY diferenca_percentual_vs_media DESC
 LIMIT 10;
 
@@ -507,7 +518,7 @@ SELECT categoria,
        SUM(receita_total) AS receita_total,
        COUNT(*) FILTER (WHERE classificacao_preco IN ('MAIS_CARO_QUE_TODOS', 'ACIMA_DA_MEDIA')) AS produtos_caros,
        COUNT(*) FILTER (WHERE classificacao_preco IN ('MAIS_BARATO_QUE_TODOS', 'ABAIXO_DA_MEDIA')) AS produtos_baratos
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 GROUP BY categoria
 ORDER BY dif_media_pct DESC;
 
@@ -516,7 +527,7 @@ SELECT produto_id, nome_produto, categoria,
        nosso_preco, preco_medio_concorrentes,
        diferenca_percentual_vs_media,
        quantidade_total
-FROM public_gold_pricing.precos_competitividade
+FROM public_gold_pricing.gold_pricing_precos_competitividade
 WHERE classificacao_preco IN ('MAIS_CARO_QUE_TODOS', 'ACIMA_DA_MEDIA')
   AND quantidade_total < 5
 ORDER BY diferenca_percentual_vs_media DESC;
@@ -528,7 +539,7 @@ ORDER BY diferenca_percentual_vs_media DESC;
 
 ```
 ┌──────────────────────────┐
-│   clientes_segmentacao   │
+│   gold_customer_success_clientes_segmentacao   │
 │   (public_gold_cs)       │
 │                          │
 │  cliente_id ─────────────┼──┐
@@ -538,7 +549,7 @@ ORDER BY diferenca_percentual_vs_media DESC;
 └──────────────────────────┘  │
                               │  JOIN via silver_vendas.id_cliente
 ┌──────────────────────────┐  │
-│   vendas_temporais       │◄─┘ (dados vêm da mesma silver_vendas)
+│   gold_sales_vendas_temporais       │◄─┘ (dados vêm da mesma silver_vendas)
 │   (public_gold_sales)    │
 │                          │
 │  data_venda ─────────────┼──┐
@@ -547,7 +558,7 @@ ORDER BY diferenca_percentual_vs_media DESC;
 └──────────────────────────┘  │
                               │  JOIN via silver_vendas.id_produto
 ┌──────────────────────────┐  │
-│  precos_competitividade  │◄─┘ (vendas_por_produto vem de silver_vendas)
+│  gold_pricing_precos_competitividade  │◄─┘ (vendas_por_produto vem de silver_vendas)
 │  (public_gold_pricing)   │
 │                          │
 │  produto_id              │
@@ -577,8 +588,8 @@ SELECT
     COUNT(DISTINCT vd.id_cliente) AS total_clientes,
     SUM(vd.receita_total) AS receita
 FROM vendas_detalhe vd
-JOIN public_gold_cs.clientes_segmentacao cs ON vd.id_cliente = cs.cliente_id
-JOIN public_gold_pricing.precos_competitividade pc ON vd.id_produto = pc.produto_id
+JOIN public_gold_cs.gold_customer_success_clientes_segmentacao cs ON vd.id_cliente = cs.cliente_id
+JOIN public_gold_pricing.gold_pricing_precos_competitividade pc ON vd.id_produto = pc.produto_id
 GROUP BY 1, 2
 ORDER BY 1, 2;
 ```
@@ -635,7 +646,7 @@ conn = psycopg2.connect(
 )
 
 # Leitura de cada data mart
-df_vendas = pd.read_sql("SELECT * FROM public_gold_sales.vendas_temporais", conn)
-df_clientes = pd.read_sql("SELECT * FROM public_gold_cs.clientes_segmentacao", conn)
-df_precos = pd.read_sql("SELECT * FROM public_gold_pricing.precos_competitividade", conn)
+df_vendas = pd.read_sql("SELECT * FROM public_gold_sales.gold_sales_vendas_temporais", conn)
+df_clientes = pd.read_sql("SELECT * FROM public_gold_cs.gold_customer_success_clientes_segmentacao", conn)
+df_precos = pd.read_sql("SELECT * FROM public_gold_pricing.gold_pricing_precos_competitividade", conn)
 ```
