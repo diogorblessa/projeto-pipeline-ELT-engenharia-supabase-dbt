@@ -86,7 +86,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['ecommerce', 'loja_fisica']
+              values: ['ecommerce', 'loja_fisica', 'NAO_INFORMADO']
       - name: quantidade
         description: "Quantidade vendida tipada como inteiro."
         tests:
