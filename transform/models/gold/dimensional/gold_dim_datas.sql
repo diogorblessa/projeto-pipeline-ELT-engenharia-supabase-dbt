@@ -19,10 +19,10 @@ datas_validas AS (
 
 SELECT
     data,
-    EXTRACT(YEAR FROM data::timestamp) AS ano,
-    EXTRACT(MONTH FROM data::timestamp) AS mes,
-    EXTRACT(DAY FROM data::timestamp) AS dia,
-    EXTRACT(DOW FROM data::timestamp) AS dia_semana,
+    EXTRACT(YEAR FROM data::timestamp)                      AS ano,
+    EXTRACT(MONTH FROM data::timestamp)                     AS mes,
+    EXTRACT(DAY FROM data::timestamp)                       AS dia,
+    EXTRACT(DOW FROM data::timestamp)                       AS dia_semana,
     CASE EXTRACT(DOW FROM data::timestamp)
         WHEN 0 THEN 'Domingo'
         WHEN 1 THEN 'Segunda'
@@ -31,6 +31,10 @@ SELECT
         WHEN 4 THEN 'Quinta'
         WHEN 5 THEN 'Sexta'
         WHEN 6 THEN 'Sabado'
-    END AS dia_semana_nome
+    END                                                     AS dia_semana_nome,
+    EXTRACT(QUARTER FROM data::timestamp)::integer          AS trimestre,
+    TO_CHAR(data::timestamp, 'TMMonth')                     AS nome_mes,
+    EXTRACT(WEEK FROM data::timestamp)::integer             AS numero_semana,
+    EXTRACT(DOW FROM data::timestamp) IN (0, 6)             AS is_fim_de_semana,
+    data = date_trunc('month', data::timestamp)::date       AS is_primeiro_dia_mes
 FROM datas_validas
-ORDER BY data
