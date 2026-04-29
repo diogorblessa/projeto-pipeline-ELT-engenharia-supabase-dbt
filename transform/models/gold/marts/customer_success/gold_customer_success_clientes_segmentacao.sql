@@ -11,6 +11,9 @@ WITH receita_por_cliente AS (
     FROM {{ ref('gold_fct_vendas') }} f
     LEFT JOIN {{ ref('gold_dim_clientes') }} c
         ON f.id_cliente = c.id_cliente
+    {% if var('data_referencia_cs', none) is not none %}
+    WHERE f.data_venda <= '{{ var("data_referencia_cs") }}'::date
+    {% endif %}
     GROUP BY f.id_cliente, c.nome_cliente, c.estado
 )
 

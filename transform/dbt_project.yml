@@ -65,3 +65,4 @@ vars:
   faixa_venda_medio_max: 500
   faixa_produto_premium_min: 1000
   faixa_produto_medio_min: 500
+  data_referencia_cs: null
