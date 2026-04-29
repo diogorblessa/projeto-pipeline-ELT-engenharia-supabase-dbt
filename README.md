@@ -1,7 +1,7 @@
 # Pipeline ELT — E-commerce Analytics
 
-Pipeline ELT com extração Python (S3 → PostgreSQL) e transformação dbt
-(Bronze → Silver → Gold) sobre Supabase.
+Pipeline ELT com extracao Python (S3 -> PostgreSQL) e transformacao dbt
+(Bronze -> Silver conformada -> Gold dimensional -> Gold marts) sobre Supabase.
 
 ## Stack
 
@@ -13,8 +13,8 @@ Pipeline ELT com extração Python (S3 → PostgreSQL) e transformação dbt
 
 ## Estrutura
 
-- `extract_load/` — etapas Extract + Load (S3 → Postgres `public`)
-- `transform/` — projeto dbt (Bronze → Silver → Gold)
+- `extract_load/` - etapas Extract + Load (S3 -> Postgres `public`)
+- `transform/` - projeto dbt (Bronze -> Silver conformada -> Gold dimensional -> Gold marts)
 
 ## Setup local
 
@@ -38,7 +38,16 @@ cp .env.example .env
 ./scripts/run-pipeline.sh
 ```
 
-Roda Extract+Load e dbt run em sequência. Use este atalho no dia a dia — EL e T precisam rodar juntos porque o EL faz `DROP CASCADE` nas raw (apaga as views bronze) e o dbt run logo depois reconstrói a cadeia bronze→silver→gold.
+Roda Extract+Load e dbt run em sequencia. Use este atalho no dia a dia: EL e T precisam rodar juntos porque o EL faz `DROP CASCADE` nas raw (apaga as views bronze) e o dbt run logo depois reconstroi a cadeia bronze -> silver -> gold.
+
+## Modelos analiticos
+
+- Silver: camada conformada, responsavel por tipos, deduplicacao, padronizacao textual, regras de nulos e produtos inferidos quando fatos referenciam produtos ausentes no catalogo.
+- Gold dimensional: `public_gold.gold_dim_*` e `public_gold.gold_fct_*`.
+- Marts finais:
+  - `public_gold_sales.gold_sales_vendas_temporais`
+  - `public_gold_cs.gold_customer_success_clientes_segmentacao`
+  - `public_gold_pricing.gold_pricing_precos_competitividade`
 
 **Etapas separadas (para debug ou runs seletivos):**
 

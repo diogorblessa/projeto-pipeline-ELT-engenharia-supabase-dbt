@@ -3,7 +3,7 @@
 ## Contexto
 
 Projeto dbt para criar uma camada analitica sobre um banco PostgreSQL de e-commerce.
-Arquitetura Medalhao com 3 camadas: Bronze, Silver, Gold.
+Arquitetura Medalhao com Bronze, Silver conformada, Gold dimensional e Gold marts finais.
 Banco: PostgreSQL (Supabase). Dialeto SQL: PostgreSQL.
 
 ---
@@ -66,15 +66,14 @@ Precos coletados de concorrentes para os mesmos produtos.
 
 ## Arquitetura
 
-```
+```text
 models/
-├── _sources.yml
-├── bronze/          -> 4 models (view)
-├── silver/          -> 4 models (table)
-└── gold/            -> 3 models (table), 1 por data mart
-    ├── sales/
-    ├── customer_success/
-    └── pricing/
+  _sources.yml
+  bronze/          -> 4 models (view), copia fiel das fontes
+  silver/          -> 4 models (table), dados limpos e conformados
+  gold/
+    dimensional/   -> dimensoes e fatos reutilizaveis
+    marts/         -> data marts finais por area
 ```
 
 ### Configuracao dbt_project.yml
@@ -90,13 +89,20 @@ models:
       +schema: silver
     gold:
       +materialized: table
-      +schema: gold
+      dimensional:
+        +schema: gold
+      marts:
+        sales:
+          +schema: gold_sales
+        customer_success:
+          +schema: gold_cs
+        pricing:
+          +schema: gold_pricing
 
 vars:
   segmentacao_vip_threshold: 10000
   segmentacao_top_tier_threshold: 5000
 ```
-
 ---
 
 ## Exemplo completo: ETL de Vendas
@@ -138,32 +144,26 @@ SELECT
 FROM {{ ref('bronze_vendas') }} v
 ```
 
-### vendas_temporais.sql (gold/sales/)
+### gold_sales_vendas_temporais.sql (gold/marts/sales/)
 
 ```sql
 SELECT
-    v.data_venda_date AS data_venda,
-    v.ano_venda,
-    v.mes_venda,
-    v.dia_venda,
-    CASE v.dia_semana
-        WHEN 0 THEN 'Domingo'
-        WHEN 1 THEN 'Segunda'
-        WHEN 2 THEN 'Terca'
-        WHEN 3 THEN 'Quarta'
-        WHEN 4 THEN 'Quinta'
-        WHEN 5 THEN 'Sexta'
-        WHEN 6 THEN 'Sabado'
-    END AS dia_semana_nome,
-    v.hora_venda,
-    SUM(v.receita_total) AS receita_total,
-    SUM(v.quantidade) AS quantidade_total,
-    COUNT(DISTINCT v.id_venda) AS total_vendas,
-    COUNT(DISTINCT v.id_cliente) AS total_clientes_unicos,
-    AVG(v.receita_total) AS ticket_medio
-FROM {{ ref('silver_vendas') }} v
+    f.data_venda,
+    d.ano AS ano_venda,
+    d.mes AS mes_venda,
+    d.dia AS dia_venda,
+    d.dia_semana_nome AS dia_da_semana,
+    f.hora_venda,
+    SUM(f.receita_total) AS receita_total,
+    SUM(f.quantidade) AS quantidade_total,
+    COUNT(DISTINCT f.id_venda) AS total_vendas,
+    COUNT(DISTINCT f.id_cliente) AS total_clientes_unicos,
+    AVG(f.receita_total) AS ticket_medio
+FROM {{ ref('gold_fct_vendas') }} f
+LEFT JOIN {{ ref('gold_dim_datas') }} d
+    ON f.data_venda = d.data
 GROUP BY 1, 2, 3, 4, 5, 6
-ORDER BY data_venda DESC, v.hora_venda
+ORDER BY data_venda DESC, f.hora_venda
 ```
 
 ---
@@ -193,163 +193,80 @@ ORDER BY data_venda DESC, v.hora_venda
 
 ## Camada Silver
 
-**Objetivo:** Manter todas as colunas do bronze + criar novas colunas calculadas.
+**Objetivo:** transformar Bronze em dados limpos, tipados, deduplicados e conformados para consumo pela Gold.
 **Materializacao:** table
-**Regras gerais:**
-- Cada silver corresponde a exatamente 1 bronze (relacao 1:1)
-- Sem JOINs entre tabelas
-- Sem WHERE (nao filtrar dados)
-- Sem UPPER, TRIM ou limpeza de texto
-- Sem flags de validacao
-- Apenas adicionar colunas calculadas derivadas das colunas existentes
-- Referencia: Usar `{{ ref('bronze_nome') }}`
 
-### Modelos a criar
+**Regras gerais:**
+- Cada entidade Silver deve ter grao claro e chave unica testada.
+- Deduplicar por chave natural: `id_cliente`, `id_produto`, `id_venda` e `id_produto + concorrente + data_da_coleta`.
+- Padronizar textos com `trim`, caixa consistente e marcador `NAO_INFORMADO` para atributos descritivos ausentes.
+- Corrigir tipos em Silver: ids como texto, datas como `timestamp`/`date`, precos como `numeric(10,2)` e quantidades como inteiro.
+- Filtrar linhas com chaves, datas ou medidas criticas invalidas.
+- Preservar fatos validos: se vendas ou precos referenciam produtos ausentes no catalogo, criar produto inferido em `silver_produtos` com `status_cadastro = 'INFERIDO'`.
+- Declarar testes de qualidade em `models/silver/_silver_models.yml`.
+
+### Modelos Silver
 
 #### silver_clientes.sql
 - Fonte: `{{ ref('bronze_clientes') }}`
-- Colunas: id_cliente, nome_cliente, estado, pais, data_cadastro
-- Sem colunas calculadas (pass-through)
+- Grao: 1 linha por `id_cliente`
+- Tratamentos: trim, UF em maiusculo, pais capitalizado, deduplicacao por cadastro mais recente.
 
 #### silver_produtos.sql
-- Fonte: `{{ ref('bronze_produtos') }}`
-- Colunas originais mantidas: id_produto, nome_produto, categoria, marca, preco_atual, data_criacao
-- Colunas calculadas:
-  - `faixa_preco` = CASE WHEN preco_atual > 1000 THEN 'PREMIUM' WHEN preco_atual > 500 THEN 'MEDIO' ELSE 'BASICO' END
+- Fontes: `{{ ref('bronze_produtos') }}`, `{{ ref('bronze_vendas') }}` e `{{ ref('bronze_preco_competidores') }}`
+- Grao: 1 linha por `id_produto`
+- Tratamentos: trim, categoria/marca em maiusculo, `faixa_preco`, `status_cadastro` (`CADASTRADO` ou `INFERIDO`) e produtos inferidos para manter integridade referencial.
+
+#### silver_vendas.sql
+- Fonte: `{{ ref('bronze_vendas') }}`
+- Grao: 1 linha por `id_venda`
+- Tratamentos: tipos, canal padronizado, deduplicacao, filtro de chaves/datas/medidas invalidas, `receita_total` e dimensoes temporais.
 
 #### silver_preco_competidores.sql
 - Fonte: `{{ ref('bronze_preco_competidores') }}`
-- Colunas originais mantidas: id_produto, nome_concorrente, preco_concorrente, data_coleta
-- Colunas calculadas:
-  - `data_da_coleta` = DATE(data_coleta::timestamp)
+- Grao: 1 linha por `id_produto + nome_concorrente + data_da_coleta`
+- Tratamentos: tipos, concorrente padronizado, chave tecnica `preco_competidor_key`, deduplicacao e filtro de medidas invalidas.
 
 ---
 
 ## Camada Gold
 
-**Objetivo:** Responder perguntas de negocio. JOINs entre tabelas silver + agregacoes + metricas.
+**Objetivo:** modelar dados conformados em dimensoes, fatos e marts finais para analise.
 **Materializacao:** table
-**Regras gerais:**
-- Fazer JOINs entre tabelas silver conforme necessidade
-- Usar LEFT JOIN (nao perder registros da tabela principal)
-- Agregacoes com GROUP BY
-- Referencia: Usar `{{ ref('silver_nome') }}`
-- Variaveis de negocio: Usar `{{ var('nome_variavel', valor_default) }}`
-- 1 modelo por data mart (3 data marts)
 
-### Data Mart: Customer Success
+### Gold dimensional
 
-#### clientes_segmentacao.sql
+- `gold_dim_clientes`: dimensao de clientes baseada em `silver_clientes`.
+- `gold_dim_produtos`: dimensao de produtos baseada em `silver_produtos`, incluindo `status_cadastro`.
+- `gold_dim_datas`: dimensao de datas unificada para vendas e coletas de preco.
+- `gold_dim_concorrentes`: dimensao de concorrentes com chave tecnica deterministica.
+- `gold_fct_vendas`: fato principal, uma linha por `id_venda`.
+- `gold_fct_precos_competidores`: fato auxiliar de pricing por produto, concorrente e data.
 
-**Pergunta de negocio:** Quais sao meus melhores clientes?
+### Gold marts finais
 
-- Pasta: `models/gold/customer_success/`
-- Fontes: `{{ ref('silver_vendas') }}` v LEFT JOIN `{{ ref('silver_clientes') }}` c ON v.id_cliente = c.id_cliente
-- Usar CTE `receita_por_cliente` para agregar antes de segmentar
-- Agrupamento na CTE: GROUP BY v.id_cliente, c.nome_cliente, c.estado
-- Ordenacao: ORDER BY receita_total DESC
+#### gold_sales_vendas_temporais.sql
+- Pasta: `models/gold/marts/sales/`
+- Fontes: `{{ ref('gold_fct_vendas') }}` e `{{ ref('gold_dim_datas') }}`
+- Pergunta de negocio: desempenho temporal de vendas.
 
-**Colunas da CTE receita_por_cliente:**
+#### gold_customer_success_clientes_segmentacao.sql
+- Pasta: `models/gold/marts/customer_success/`
+- Fontes: `{{ ref('gold_fct_vendas') }}` e `{{ ref('gold_dim_clientes') }}`
+- Pergunta de negocio: melhores clientes por receita e comportamento de compra.
+- Usa `segmentacao_vip_threshold` e `segmentacao_top_tier_threshold`.
 
-| Coluna | Logica |
-|--------|--------|
-| id_cliente | v.id_cliente |
-| nome_cliente | c.nome_cliente |
-| estado | c.estado |
-| receita_total | SUM(v.receita_total) |
-| total_compras | COUNT(DISTINCT v.id_venda) |
-| ticket_medio | AVG(v.receita_total) |
-| primeira_compra | MIN(v.data_venda_date) |
-| ultima_compra | MAX(v.data_venda_date) |
+#### gold_pricing_precos_competitividade.sql
+- Pasta: `models/gold/marts/pricing/`
+- Fontes: `{{ ref('gold_dim_produtos') }}`, `{{ ref('gold_fct_precos_competidores') }}`, `{{ ref('gold_dim_concorrentes') }}` e `{{ ref('gold_fct_vendas') }}`
+- Pergunta de negocio: competitividade de precos contra concorrentes.
+- Usa `COALESCE` para vendas agregadas ausentes e mantem a classificacao de preco por regra de negocio.
 
-**Colunas de saida (SELECT final sobre a CTE):**
+### Testes
 
-| Coluna | Logica |
-|--------|--------|
-| cliente_id | id_cliente (alias) |
-| nome_cliente | nome_cliente |
-| estado | estado |
-| receita_total | receita_total |
-| total_compras | total_compras |
-| ticket_medio | ticket_medio |
-| primeira_compra | primeira_compra |
-| ultima_compra | ultima_compra |
-| segmento_cliente | CASE: receita_total >= var('segmentacao_vip_threshold', 10000) -> 'VIP', receita_total >= var('segmentacao_top_tier_threshold', 5000) -> 'TOP_TIER', ELSE -> 'REGULAR' |
-| ranking_receita | ROW_NUMBER() OVER (ORDER BY receita_total DESC) |
-
-**Regras de segmentacao:**
-- VIP: receita_total >= R$ 10.000 (configuravel via var)
-- TOP_TIER: receita_total >= R$ 5.000 (configuravel via var)
-- REGULAR: receita_total < R$ 5.000
-
----
-
-### Data Mart: Pricing
-
-#### precos_competitividade.sql
-
-**Pergunta de negocio:** Como estamos em relacao a concorrencia?
-
-- Pasta: `models/gold/pricing/`
-- Usar 2 CTEs antes do SELECT final
-- Ordenacao: ORDER BY diferenca_percentual_vs_media DESC
-
-**CTE 1 - precos_por_produto:**
-- Fontes: `{{ ref('silver_produtos') }}` p LEFT JOIN `{{ ref('silver_preco_competidores') }}` pc ON p.id_produto = pc.id_produto
-- Agrupamento: GROUP BY p.id_produto, p.nome_produto, p.categoria, p.marca, p.preco_atual
-
-| Coluna | Logica |
-|--------|--------|
-| id_produto | p.id_produto |
-| nome_produto | p.nome_produto |
-| categoria | p.categoria |
-| marca | p.marca |
-| nosso_preco | p.preco_atual |
-| preco_medio_concorrentes | AVG(pc.preco_concorrente) |
-| preco_minimo_concorrentes | MIN(pc.preco_concorrente) |
-| preco_maximo_concorrentes | MAX(pc.preco_concorrente) |
-| total_concorrentes | COUNT(DISTINCT pc.nome_concorrente) |
-
-**CTE 2 - vendas_por_produto:**
-- Fonte: `{{ ref('silver_vendas') }}` v
-- Agrupamento: GROUP BY v.id_produto
-
-| Coluna | Logica |
-|--------|--------|
-| id_produto | v.id_produto |
-| receita_total | SUM(v.receita_total) |
-| quantidade_total | SUM(v.quantidade) |
-
-**SELECT final:**
-- JOIN: precos_por_produto pp LEFT JOIN vendas_por_produto vp ON pp.id_produto = vp.id_produto
-- Filtro: WHERE pp.preco_medio_concorrentes IS NOT NULL (so produtos com dados de concorrentes)
-
-| Coluna | Logica |
-|--------|--------|
-| produto_id | pp.id_produto (alias) |
-| nome_produto | pp.nome_produto |
-| categoria | pp.categoria |
-| marca | pp.marca |
-| nosso_preco | pp.nosso_preco |
-| preco_medio_concorrentes | pp.preco_medio_concorrentes |
-| preco_minimo_concorrentes | pp.preco_minimo_concorrentes |
-| preco_maximo_concorrentes | pp.preco_maximo_concorrentes |
-| total_concorrentes | pp.total_concorrentes |
-| diferenca_percentual_vs_media | ((nosso_preco - preco_medio_concorrentes) / preco_medio_concorrentes) * 100 -- NULL se preco_medio = 0 |
-| diferenca_percentual_vs_minimo | ((nosso_preco - preco_minimo_concorrentes) / preco_minimo_concorrentes) * 100 -- NULL se preco_minimo = 0 |
-| classificacao_preco | Ver regras abaixo |
-| receita_total | COALESCE(vp.receita_total, 0) |
-| quantidade_total | COALESCE(vp.quantidade_total, 0) |
-
-**Regras de classificacao de preco:**
-1. Se nosso_preco > preco_maximo_concorrentes -> 'MAIS_CARO_QUE_TODOS'
-2. Se nosso_preco < preco_minimo_concorrentes -> 'MAIS_BARATO_QUE_TODOS'
-3. Se nosso_preco > preco_medio_concorrentes -> 'ACIMA_DA_MEDIA'
-4. Se nosso_preco < preco_medio_concorrentes -> 'ABAIXO_DA_MEDIA'
-5. Senao -> 'NA_MEDIA'
-
-A ordem dos CASE WHEN importa (avaliar de cima para baixo).
-
+- Contratos Silver: `models/silver/_silver_models.yml`.
+- Contratos Gold: `models/gold/_gold_models.yml`.
+- Testes principais: `unique`, `not_null`, `accepted_values` e `relationships`.
 ---
 
 ## Arquivo _sources.yml
@@ -363,7 +280,8 @@ Criar em `models/_sources.yml`. Definir as 4 tabelas fonte com source name `raw`
 | Camada | Modelos | Materializacao | Regra principal |
 |--------|---------|----------------|-----------------|
 | Bronze | 4 | view | SELECT explicito da fonte, sem transformacao |
-| Silver | 4 | table | Colunas originais + colunas calculadas, sem JOIN, sem filtro |
-| Gold | 3 | table | JOINs + agregacoes + regras de negocio, 1 por data mart |
+| Silver | 4 | table | Dados limpos, tipados, deduplicados e conformados |
+| Gold | 9 | table | Dimensoes, fatos e marts finais para analise |
 
-**Total: 11 modelos SQL + 1 _sources.yml + 1 dbt_project.yml**
+**Total: 17 modelos SQL + 2 arquivos de contratos de modelos + 1 _sources.yml + 1 dbt_project.yml**
+

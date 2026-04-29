@@ -4,12 +4,12 @@ Este arquivo fornece orientações ao Claude Code (claude.ai/code) para trabalha
 
 ## Visão Geral
 
-Pipeline ELT de analytics para e-commerce usando Python (extração + carga) e dbt (transformação). Implementa a Arquitetura Medallion (Bronze → Silver → Gold) com três data marts de domínio na camada Gold. Stack gerenciada via uv workspace; pipeline containerizado via Docker.
+Pipeline ELT de analytics para e-commerce usando Python (extração + carga) e dbt (transformação). Implementa a Arquitetura Medallion com Bronze, Silver conformada, Gold dimensional e Gold marts finais. Stack gerenciada via uv workspace; pipeline containerizado via Docker.
 
 ## Estrutura
 
 - `extract_load/` — pacote Python: etapas Extract + Load (S3 → Postgres schema `public`)
-- `transform/` — projeto dbt: etapa Transform (Bronze → Silver → Gold)
+- `transform/` — projeto dbt: etapa Transform (Bronze → Silver conformada → Gold dimensional → Gold marts)
 - `pyproject.toml` (raiz) — workspace uv + ruff + pytest
 - `docker-compose.yml` — orquestra os 2 serviços (extract, dbt)
 - `.env` (gitignored) — segredos consumidos pelos dois pacotes
@@ -52,7 +52,7 @@ uv run --package transform dbt docs generate --project-dir transform --profiles-
 
 # Execuções seletivas
 uv run --package transform dbt run --project-dir transform --profiles-dir transform -s tag:gold
-uv run --package transform dbt run --project-dir transform --profiles-dir transform -m vendas_temporais
+uv run --package transform dbt run --project-dir transform --profiles-dir transform -s gold_sales_vendas_temporais
 uv run --package transform dbt run --project-dir transform --profiles-dir transform --full-refresh
 ```
 
@@ -90,16 +90,23 @@ PostgreSQL schema: public (tabelas raw)
 PostgreSQL schema: bronze
          ↓ camada silver dbt (TABLEs — limpeza, enriquecimento, cálculos)
 PostgreSQL schema: silver
-         ↓ camada gold dbt (TABLEs — KPIs por domínio, prontos para dashboards)
-  public_gold_sales.vendas_temporais          → Analytics de vendas
-  public_gold_cs.clientes_segmentacao         → Segmentação de clientes
-  public_gold_pricing.precos_competitividade  → Inteligência de preços
+         ↓ camada gold dimensional dbt (TABLEs — dimensões e fatos conformados)
+  public_gold.gold_dim_clientes
+  public_gold.gold_dim_produtos
+  public_gold.gold_dim_datas
+  public_gold.gold_dim_concorrentes
+  public_gold.gold_fct_vendas
+  public_gold.gold_fct_precos_competidores
+         ↓ gold marts finais (TABLEs — KPIs por domínio, prontos para dashboards)
+  public_gold_sales.gold_sales_vendas_temporais
+  public_gold_cs.gold_customer_success_clientes_segmentacao
+  public_gold_pricing.gold_pricing_precos_competitividade
 ```
 
 **Decisão de materialização:**
 - Bronze: VIEWs — sempre reflete os dados raw, armazenamento mínimo
-- Silver: TABLEs — persiste dados limpos/enriquecidos como base para o Gold
-- Gold: TABLEs — otimizado para performance de consulta, pronto para dashboards
+- Silver: TABLEs — persiste dados limpos, tipados, deduplicados e conformados como base para o Gold
+- Gold: TABLEs — separa dimensões/fatos reutilizáveis dos marts finais de consumo
 
 ## Estrutura do Projeto dbt
 
@@ -107,8 +114,9 @@ PostgreSQL schema: silver
 - `transform/profiles.yml` — versionado, lê todas as credenciais via `env_var()`.
 - `transform/models/_sources.yml` — mapeia `source('raw', ...)` para o schema `public` do PostgreSQL
 - `transform/models/bronze/` — 4 modelos, um por tabela raw
-- `transform/models/silver/` — 4 modelos; `silver_vendas.sql` é o mais complexo (dimensões temporais, `receita_total = quantidade × preco_unitario`, classificação de faixa de preço)
-- `transform/models/gold/sales/`, `gold/customer_success/`, `gold/pricing/` — 3 modelos de data mart por domínio
+- `transform/models/silver/` — 4 modelos conformados; aplicam tipos, deduplicação, padronização textual, produtos inferidos e contratos de qualidade.
+- `transform/models/gold/dimensional/` — dimensões e fatos reutilizáveis (`gold_dim_*`, `gold_fct_*`).
+- `transform/models/gold/marts/<setor>/` — 3 modelos finais de data mart por domínio, com prefixo `gold_*`.
 
 ## Estrutura do pacote `extract_load/`
 
@@ -129,7 +137,7 @@ PostgreSQL schema: silver
 - Colunas: snake_case em português (`receita_total`, `ticket_medio`, `segmento_cliente`)
 - Dimensões temporais: sempre extrair `ano`, `mes`, `dia`, `dia_semana`, `hora` na camada silver para uso downstream
 
-**Tratamento de nulos:** Usar `COALESCE(valor, 0)` para colunas numéricas que podem estar ausentes (especialmente nas tabelas de preços).
+**Tratamento de nulos:** Na Silver, chaves e datas críticas são filtradas quando inválidas; atributos descritivos recebem `NAO_INFORMADO`; produtos ausentes no catálogo mas referenciados em fatos entram como `status_cadastro = 'INFERIDO'`. Na Gold, usar `COALESCE(valor, 0)` apenas para métricas agregadas em que ausência significa zero.
 
 ## Configuração de Ambiente
 
