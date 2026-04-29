@@ -26,7 +26,7 @@ vendas_validas AS (
       AND id_produto IS NOT NULL
       AND data_venda IS NOT NULL
       AND quantidade > 0
-      AND preco_unitario >= 0
+      AND preco_unitario > 0
 )
 
 SELECT

@@ -30,7 +30,7 @@ precos_validos AS (
     WHERE id_produto IS NOT NULL
       AND nome_concorrente <> 'NAO_INFORMADO'
       AND data_da_coleta IS NOT NULL
-      AND preco_concorrente >= 0
+      AND preco_concorrente > 0
 )
 
 SELECT
