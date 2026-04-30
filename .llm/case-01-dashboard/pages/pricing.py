@@ -104,7 +104,7 @@ def render():
     )
 
     # Tabela de alertas
-    st.markdown("### ⚠️ Produtos em Alerta (mais caros que todos os concorrentes)")
+    st.markdown("### ⚠️ Produtos em Alerta")
     df_alert = df_f[df_f["classificacao_preco"] == "MAIS_CARO_QUE_TODOS"][[
         "produto_id", "nome_produto", "categoria",
         "nosso_preco", "preco_maximo_concorrentes", "diferenca_percentual_vs_media",
