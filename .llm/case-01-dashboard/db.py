@@ -1,22 +1,15 @@
 import os
-import yaml
+
 import pandas as pd
-from pathlib import Path
 from sqlalchemy import create_engine, text
 
 
 def get_engine():
     url = os.getenv("POSTGRES_URL")
-    if url:
-        return create_engine(url)
-    profiles_path = Path.home() / ".dbt" / "profiles.yml"
-    with open(profiles_path) as f:
-        profiles = yaml.safe_load(f)
-    dev = profiles["ecommerce"]["outputs"]["dev"]
-    url = (
-        f"postgresql://{dev['user']}:{dev['password']}"
-        f"@{dev['host']}:{dev['port']}/{dev['dbname']}"
-    )
+    if not url:
+        raise RuntimeError(
+            "POSTGRES_URL nao configurada. Defina no .env da raiz do projeto."
+        )
     return create_engine(url)
 
 

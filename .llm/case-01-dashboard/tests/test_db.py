@@ -1,44 +1,29 @@
-import pytest
-import yaml
+from unittest.mock import patch
+
 import pandas as pd
-from unittest.mock import patch, mock_open
+import pytest
 from sqlalchemy import create_engine, text
 
 
 class TestGetEngine:
     def test_usa_postgres_url_quando_definida(self, monkeypatch):
         monkeypatch.setenv("POSTGRES_URL", "postgresql://u:p@host:5432/db")
-        import db
         import importlib
+
+        import db
         importlib.reload(db)
         with patch("db.create_engine") as mock_engine:
             db.get_engine()
             mock_engine.assert_called_once_with("postgresql://u:p@host:5432/db")
 
-    def test_fallback_para_profiles_yml(self, monkeypatch):
+    def test_levanta_erro_sem_postgres_url(self, monkeypatch):
         monkeypatch.delenv("POSTGRES_URL", raising=False)
-        profiles_yaml = yaml.dump({
-            "ecommerce": {
-                "outputs": {
-                    "dev": {
-                        "user": "myuser",
-                        "password": "mypass",
-                        "host": "myhost",
-                        "port": 5432,
-                        "dbname": "mydb",
-                    }
-                }
-            }
-        })
-        import db
         import importlib
+
+        import db
         importlib.reload(db)
-        with patch("builtins.open", mock_open(read_data=profiles_yaml)), \
-             patch("db.create_engine") as mock_engine:
+        with pytest.raises(RuntimeError, match="POSTGRES_URL"):
             db.get_engine()
-            mock_engine.assert_called_once_with(
-                "postgresql://myuser:mypass@myhost:5432/mydb"
-            )
 
 
 class TestGetData:
