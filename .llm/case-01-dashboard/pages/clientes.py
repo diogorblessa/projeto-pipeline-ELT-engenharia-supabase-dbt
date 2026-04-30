@@ -76,7 +76,7 @@ def render():
     # Linha 2: Top 10 (1/2) | Clientes por Estado (1/2)
     col_c, col_d = st.columns(2)
 
-    df_top10 = df.nsmallest(10, "ranking_receita").sort_values("receita_total")
+    df_top10 = df.nsmallest(10, "ranking_receita").sort_values("ranking_receita", ascending=False)
     fig3 = px.bar(
         df_top10, x="receita_total", y="nome_cliente", orientation="h",
         color_discrete_sequence=["#009E73"],
