@@ -16,15 +16,17 @@ Dashboard Streamlit para 3 diretores de um e-commerce consumirem os Data Marts G
 
 ```
 case-01-dashboard/
-├── app.py              ← entry point: CSS global, sidebar, roteamento
+├── app.py              ← entry point: CSS global, sidebar, roteamento, apply_chart_style()
 ├── db.py               ← engine SQLAlchemy + função get_data(query) → DataFrame
-├── pages/
+├── pages/              ← módulos Python regulares (NOT Streamlit multi-page nativo)
 │   ├── vendas.py       ← Página 1: Diretor Comercial
 │   ├── clientes.py     ← Página 2: Diretora de Customer Success
 │   └── pricing.py      ← Página 3: Diretor de Pricing
 ├── requirements.txt
 └── .env.example
 ```
+
+> `app.py` importa os módulos de `pages/` e chama a função `render()` da página selecionada. Não usa o sistema de roteamento nativo do Streamlit (`pages/` folder convention).
 
 **Fontes de dados:**
 - `public_gold_sales.gold_sales_vendas_temporais`
@@ -100,7 +102,7 @@ Cor de borda por página:
 - Header: título `h1` + linha divisória na cor tema da página
 - KPIs: `st.columns(4)` com cards HTML via `st.markdown(unsafe_allow_html=True)`
 - Gráficos: `px` Plotly com fundo transparente, fonte Plus Jakarta Sans
-- Função `apply_chart_style(fig, title)` aplicada em todos os gráficos:
+- Função `apply_chart_style(fig, title)` definida em `app.py`, importada nos módulos de página (`from app import apply_chart_style`), aplicada em todos os gráficos:
   - `plot_bgcolor='rgba(0,0,0,0)'`
   - `paper_bgcolor='rgba(0,0,0,0)'`
   - Grid cinza-claro `#E2E8F0`
@@ -123,7 +125,7 @@ Cor de borda por página:
 | Receita Total | `SUM(receita_total)` | `R$ X.XXX.XXX,XX` |
 | Total de Vendas | `SUM(total_vendas)` | `X.XXX` |
 | Ticket Médio | Receita Total / Total de Vendas | `R$ XXX,XX` |
-| Clientes Únicos | `SUM(total_clientes_unicos)` ponderado | `XXX` |
+| Clientes Únicos | `SUM(max por dia)`: subquery com `MAX(total_clientes_unicos) GROUP BY data_venda`, depois SUM | `XXX` |
 
 **Gráficos:**
 - **Linha 1 (full width):** Receita Diária — `px.line`, cor `#0072B2`, área preenchida 15% opacidade. X: `data_venda`, Y: `SUM(receita_total)` agrupado por `data_venda`.
