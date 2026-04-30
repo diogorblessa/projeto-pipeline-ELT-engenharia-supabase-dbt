@@ -1,7 +1,8 @@
 import streamlit as st
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 st.set_page_config(
     page_title="E-commerce Analytics",
@@ -71,13 +72,13 @@ def main():
     page = sidebar_nav()
 
     if page == "📈 Vendas":
-        from pages.vendas import render
+        from views.vendas import render
         render()
     elif page == "👥 Clientes":
-        from pages.clientes import render
+        from views.clientes import render
         render()
     elif page == "💰 Pricing":
-        from pages.pricing import render
+        from views.pricing import render
         render()
 
 
