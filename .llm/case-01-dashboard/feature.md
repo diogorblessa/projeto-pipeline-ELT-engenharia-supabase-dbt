@@ -9,30 +9,32 @@ Baseado em: `PRD-dashboard.md` (requisitos funcionais) e `database.md` (schemas,
 
 | Item | Detalhe |
 |---|---|
-| **App** | `case-01-dashboard/app.py` |
-| **Stack** | Python 3.10+, Streamlit, SQLAlchemy, psycopg2-binary, pandas, plotly, python-dotenv, pyyaml |
+| **App** | `.llm/case-01-dashboard/app.py` |
+| **Stack** | Python 3.10+, Streamlit, SQLAlchemy, psycopg2-binary, pandas, plotly, python-dotenv |
 | **Banco** | PostgreSQL (Supabase) |
 | **Schemas Gold** | `public_gold_sales`, `public_gold_cs`, `public_gold_pricing` |
 | **Usuários** | Diretor Comercial, Diretora de Customer Success, Diretor de Pricing |
 
 ---
 
-## Arquivos a Criar
+## Arquivos do dashboard
 
 | Arquivo | Descrição |
 |---|---|
-| `case-01-dashboard/app.py` | App Streamlit completo com as 3 páginas |
-| `case-01-dashboard/requirements.txt` | Dependências Python (inclui `sqlalchemy`, `pyyaml`) |
-| `case-01-dashboard/.env.example` | Template das variáveis de ambiente (`POSTGRES_URL`) |
+| `.llm/case-01-dashboard/app.py` | App Streamlit completo com as 3 páginas |
+| `.llm/case-01-dashboard/views/` | Pacote com renderização de cada página (`vendas`, `clientes`, `pricing`) |
+| `.llm/case-01-dashboard/db.py` | Engine SQLAlchemy a partir de `POSTGRES_URL` |
+| `.llm/case-01-dashboard/utils.py` | Paleta Okabe-Ito, formatadores e estilos Plotly |
+| `.llm/case-01-dashboard/requirements.txt` | Dependências Python |
+
+> Credenciais ficam no `.env` da raiz do projeto (ver `.env.example`).
 
 ---
 
 ## F-01 — Infraestrutura: Conexão e Layout Base
 
 - `st.set_page_config(layout="wide")`
-- Conexão via SQLAlchemy engine com estratégia de dois estágios:
-  1. **Docker / produção:** usa `POSTGRES_URL` do `.env` diretamente
-  2. **Dev local (fallback):** lê `~/.dbt/profiles.yml` via PyYAML e monta a connection string do `ecommerce > outputs > dev`
+- Conexão via SQLAlchemy engine usando `POSTGRES_URL` do `.env` da raiz do projeto
 - Função `get_data(query: str) -> pd.DataFrame` reutilizável via SQLAlchemy
 - Tratamento de erro de conexão com mensagem amigável
 - Sidebar com título "E-commerce Analytics" e navegação entre as 3 páginas via `st.sidebar.radio`:
@@ -149,8 +151,8 @@ Baseado em: `PRD-dashboard.md` (requisitos funcionais) e `database.md` (schemas,
 pip install -r requirements.txt
 
 # 3. Configurar credenciais (apenas na primeira vez)
-cp .llm\case-01-dashboard\.env.example .llm\case-01-dashboard\.env
-# Editar .llm\case-01-dashboard\.env com a POSTGRES_URL real do Supabase
+cp .env.example .env
+# Editar .env com a POSTGRES_URL real do Supabase
 
 # 4. Executar o dashboard
 python -m streamlit run .llm\case-01-dashboard\app.py
