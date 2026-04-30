@@ -1,6 +1,207 @@
-import pytest
+import pandas as pd
 import plotly.graph_objects as go
-from utils import fmt_brl, fmt_int, fmt_pct, apply_chart_style, kpi_card
+import pytest
+import utils
+from utils import (
+    apply_chart_style,
+    classification_label,
+    fmt_brl,
+    fmt_brl_compact,
+    fmt_int,
+    fmt_pct,
+    kpi_card,
+    month_filter_options,
+    normalize_sales_columns,
+)
+
+
+def _dataframe_with_columns(columns: tuple[str, ...]) -> pd.DataFrame:
+    return pd.DataFrame({column: [f"{column}_value"] for column in columns})
+
+
+class TestColumnContracts:
+    def test_filter_all_label_is_todos(self):
+        assert utils.FILTER_ALL == "Todos"
+
+    def test_table_names_match_dashboard_marts(self):
+        assert utils.SALES_TABLE == "public_gold_sales.gold_sales_vendas_temporais"
+        assert (
+            utils.CUSTOMERS_TABLE
+            == "public_gold_cs.gold_customer_success_clientes_segmentacao"
+        )
+        assert utils.PRICING_TABLE == "public_gold_pricing.gold_pricing_precos_competitividade"
+
+    def test_sales_required_columns_match_sales_mart_without_weekday_aliases(self):
+        assert utils.SALES_REQUIRED_COLUMNS == (
+            "data_venda",
+            "ano_venda",
+            "mes_venda",
+            "dia_venda",
+            "hora_venda",
+            "receita_total",
+            "quantidade_total",
+            "total_vendas",
+            "total_clientes_unicos",
+            "ticket_medio",
+        )
+        assert {"dia_da_semana", "dia_semana_nome"} == utils.SALES_WEEKDAY_ALIASES
+        assert not set(utils.SALES_REQUIRED_COLUMNS).intersection(
+            utils.SALES_WEEKDAY_ALIASES
+        )
+
+    def test_customers_required_columns_match_customer_mart(self):
+        assert utils.CUSTOMERS_REQUIRED_COLUMNS == (
+            "cliente_id",
+            "nome_cliente",
+            "estado",
+            "receita_total",
+            "total_compras",
+            "ticket_medio",
+            "primeira_compra",
+            "ultima_compra",
+            "segmento_cliente",
+            "ranking_receita",
+        )
+
+    def test_pricing_required_columns_match_pricing_mart(self):
+        assert utils.PRICING_REQUIRED_COLUMNS == (
+            "produto_id",
+            "nome_produto",
+            "categoria",
+            "marca",
+            "nosso_preco",
+            "preco_medio_concorrentes",
+            "preco_minimo_concorrentes",
+            "preco_maximo_concorrentes",
+            "total_concorrentes",
+            "sem_dados_concorrente",
+            "diferenca_percentual_vs_media",
+            "diferenca_percentual_vs_minimo",
+            "classificacao_preco",
+            "receita_total",
+            "quantidade_total",
+        )
+
+    def test_missing_columns_error_formats_message_in_portuguese(self):
+        error = utils.MissingColumnsError("public.tabela", ["coluna_b", "coluna_c"])
+
+        assert str(error) == (
+            "A tabela public.tabela não contém as colunas esperadas: coluna_b, coluna_c."
+        )
+
+    def test_validate_columns_accepts_required_columns(self):
+        df = _dataframe_with_columns(("coluna_a", "coluna_b"))
+
+        result = utils.validate_columns(df, ("coluna_a", "coluna_b"), "public.tabela")
+
+        assert result is df
+
+    def test_validate_columns_reports_missing_columns(self):
+        df = _dataframe_with_columns(("coluna_a",))
+
+        with pytest.raises(utils.MissingColumnsError) as exc_info:
+            utils.validate_columns(df, ("coluna_a", "coluna_b"), "public.tabela")
+
+        assert str(exc_info.value) == (
+            "A tabela public.tabela não contém as colunas esperadas: coluna_b."
+        )
+
+    def test_validate_sales_columns_accepts_dia_da_semana_alias(self):
+        df = _dataframe_with_columns((*utils.SALES_REQUIRED_COLUMNS, "dia_da_semana"))
+
+        result = utils.validate_sales_columns(df)
+
+        assert result is df
+
+    def test_validate_sales_columns_accepts_dia_semana_nome_alias(self):
+        df = _dataframe_with_columns((*utils.SALES_REQUIRED_COLUMNS, "dia_semana_nome"))
+
+        result = utils.validate_sales_columns(df)
+
+        assert result is df
+
+    def test_validate_sales_columns_requires_a_weekday_alias(self):
+        df = _dataframe_with_columns(utils.SALES_REQUIRED_COLUMNS)
+
+        with pytest.raises(utils.MissingColumnsError) as exc_info:
+            utils.validate_sales_columns(df)
+
+        assert str(exc_info.value) == (
+            f"A tabela {utils.SALES_TABLE} não contém as colunas esperadas: "
+            "dia_da_semana ou dia_semana_nome."
+        )
+
+    def test_validate_customers_columns_uses_customer_contract_and_table(self):
+        df = _dataframe_with_columns(utils.CUSTOMERS_REQUIRED_COLUMNS)
+
+        result = utils.validate_customers_columns(df)
+
+        assert result is df
+
+    def test_validate_customers_columns_reports_customer_table(self):
+        df = _dataframe_with_columns(tuple(utils.CUSTOMERS_REQUIRED_COLUMNS[:-1]))
+
+        with pytest.raises(utils.MissingColumnsError) as exc_info:
+            utils.validate_customers_columns(df)
+
+        assert str(exc_info.value) == (
+            f"A tabela {utils.CUSTOMERS_TABLE} não contém as colunas esperadas: "
+            f"{utils.CUSTOMERS_REQUIRED_COLUMNS[-1]}."
+        )
+
+    def test_validate_pricing_columns_uses_pricing_contract_and_table(self):
+        df = _dataframe_with_columns(utils.PRICING_REQUIRED_COLUMNS)
+
+        result = utils.validate_pricing_columns(df)
+
+        assert result is df
+
+    def test_validate_pricing_columns_reports_pricing_table(self):
+        df = _dataframe_with_columns(tuple(utils.PRICING_REQUIRED_COLUMNS[:-1]))
+
+        with pytest.raises(utils.MissingColumnsError) as exc_info:
+            utils.validate_pricing_columns(df)
+
+        assert str(exc_info.value) == (
+            f"A tabela {utils.PRICING_TABLE} não contém as colunas esperadas: "
+            f"{utils.PRICING_REQUIRED_COLUMNS[-1]}."
+        )
+
+
+class TestFilterHelpers:
+    def test_build_filter_options_returns_all_and_sorted_unique_strings(self):
+        values = pd.Series(["B", "A", None, "B", "C", pd.NA])
+
+        assert utils.build_filter_options(values) == ["Todos", "A", "B", "C"]
+
+    def test_filter_equals_returns_dataframe_unchanged_for_all(self):
+        df = pd.DataFrame({"categoria": ["A", "B"]})
+
+        result = utils.filter_equals(df, "categoria", utils.FILTER_ALL)
+
+        assert result is df
+
+    def test_filter_equals_returns_matching_rows(self):
+        df = pd.DataFrame({"categoria": ["A", "B", "A"]})
+
+        result = utils.filter_equals(df, "categoria", "A")
+
+        assert result["categoria"].tolist() == ["A", "A"]
+
+    def test_filter_in_returns_empty_dataframe_for_empty_selection(self):
+        df = pd.DataFrame({"categoria": ["A", "B"]})
+
+        result = utils.filter_in(df, "categoria", [])
+
+        assert result.empty
+        assert list(result.columns) == ["categoria"]
+
+    def test_filter_in_returns_matching_rows(self):
+        df = pd.DataFrame({"categoria": ["A", "B", "C"]})
+
+        result = utils.filter_in(df, "categoria", ["A", "C"])
+
+        assert result["categoria"].tolist() == ["A", "C"]
 
 
 class TestFmtBrl:
@@ -15,6 +216,14 @@ class TestFmtBrl:
 
     def test_cents_only(self):
         assert fmt_brl(0.50) == "R$ 0,50"
+
+
+class TestFmtBrlCompact:
+    def test_thousands(self):
+        assert fmt_brl_compact(28_450) == "R$ 28,5 mil"
+
+    def test_small_value_uses_full_currency(self):
+        assert fmt_brl_compact(950) == "R$ 950,00"
 
 
 class TestFmtInt:
@@ -37,6 +246,41 @@ class TestFmtPct:
 
     def test_zero(self):
         assert fmt_pct(0.0) == "+0.0%"
+
+
+class TestNormalizeSalesColumns:
+    def test_accepts_dia_da_semana_and_decimal_month(self):
+        df = pd.DataFrame(
+            {
+                "dia_da_semana": ["Terca", "Sabado"],
+                "mes_venda": [12.0, 1.0],
+            }
+        )
+
+        result = normalize_sales_columns(df)
+
+        assert result["dia_semana_nome"].tolist() == ["Terça", "Sábado"]
+        assert result["mes_venda"].tolist() == [12, 1]
+
+    def test_accepts_existing_dia_semana_nome_column(self):
+        df = pd.DataFrame({"dia_semana_nome": ["Quinta"], "mes_venda": [4.0]})
+
+        result = normalize_sales_columns(df)
+
+        assert result["dia_semana_nome"].tolist() == ["Quinta"]
+
+
+class TestMonthFilterOptions:
+    def test_returns_sorted_integer_months_without_nulls(self):
+        months = pd.Series([12.0, 1.0, None, 12.0])
+
+        assert month_filter_options(months) == [1, 12]
+
+
+class TestClassificationLabel:
+    def test_formats_known_pricing_classes_for_display(self):
+        assert classification_label("MAIS_CARO_QUE_TODOS") == "Mais caro que todos"
+        assert classification_label("SEM_DADOS") == "Sem dados"
 
 
 class TestApplyChartStyle:
