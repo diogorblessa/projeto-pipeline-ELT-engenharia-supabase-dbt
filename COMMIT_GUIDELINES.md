@@ -1,4 +1,4 @@
-# Guia de criação de commits para este projeto.
+# Guia de criação de commits para este projeto
 
 ## Objetivo
 
@@ -6,13 +6,34 @@ Padronizar mensagens de commit para manter o histórico do Git claro, rastreáve
 
 ## Regra principal
 
-- Sempre use commits semânticos em português do Brasil, com acentuação correta.
-- Cada commit deve representar uma única mudança lógica e significativa.
-- Evite commits genéricos como `update`, `ajustes`, `correções`, `mudanças`, `wip` ou `alterações gerais`.
-- Prefira commits pequenos, objetivos e fáceis de revisar.
-- Sempre que possível, cada commit deve ser executável e testável por si só.
-- Não misture alterações sem relação direta no mesmo commit.
+- Use commits semânticos em português do Brasil, com acentuação correta.
+- Mantenha o tipo semântico em inglês, como `feat`, `fix`, `docs` ou `chore`.
+- Cada commit deve representar uma única mudança lógica, significativa e diretamente relacionada.
+- Prefira commits pequenos, objetivos, revisáveis e, sempre que possível, executáveis e testáveis por si só.
+- Evite mensagens genéricas como `update`, `ajustes`, `correções`, `mudanças`, `wip` ou `alterações gerais`.
 - Antes de commitar, revise os arquivos alterados e confirme que todos pertencem ao mesmo objetivo.
+
+## Formato
+
+Use o formato abaixo:
+
+```text
+tipo(escopo): descrição
+```
+
+O escopo é opcional. Use-o quando ele deixar claro qual parte do projeto foi alterada.
+
+Exemplos:
+
+```text
+feat(extract): adiciona extração de dados da API
+fix(load): corrige gravação de dados no Supabase
+feat(dbt): adiciona modelos da camada silver
+test(dbt): adiciona testes de unicidade e nulos
+build(docker): adiciona serviços de extract e dbt
+docs(readme): atualiza instruções de instalação
+chore(env): organiza variáveis de ambiente
+```
 
 ## Tempo verbal
 
@@ -46,57 +67,33 @@ Use os tipos abaixo para organizar o histórico de commits:
 
 | Tipo | Quando usar |
 |---|---|
-| `feat` | Adição de nova funcionalidade ou capacidade do projeto, incluindo nova funcionalidade em pipeline, script ETL, modelo dbt, API ou aplicação. |
-| `fix` | Correção de erro, falha ou comportamento inesperado, incluindo erro de leitura, escrita, conexão, query incorreta ou falha em pipeline. |
+| `feat` | Nova funcionalidade ou capacidade em pipeline, script ETL, modelo dbt, API ou aplicação. |
+| `fix` | Correção de erro, falha ou comportamento inesperado em leitura, escrita, conexão, query ou pipeline. |
 | `docs` | Alteração em documentação, README, guias, comentários, notebooks explicativos ou instruções técnicas. |
-| `refactor` | Reestruturação interna do código, etapa ETL, transformação, modelo ou consulta sem mudar o comportamento esperado. |
-| `test` | Criação, correção ou melhoria de testes, incluindo testes de pipeline, dbt, qualidade de dados, schemas e validações. |
-| `chore` | Tarefa de manutenção, organização ou configuração sem impacto direto na regra de negócio. |
-| `build` | Alterações em dependências, Docker, empacotamento, ambiente de build ou ferramentas de projeto. |
-| `ci` | Alterações em pipelines de integração contínua, GitHub Actions, deploy, execução automatizada, agendamento ou orquestração. |
-| `perf` | Melhoria de desempenho sem alterar o comportamento funcional, como otimização de leitura, processamento em chunks, queries ou transformações. |
-| `style` | Ajustes de formatação, lint, espaçamento, nomes ou estilo sem alterar lógica. |
+| `refactor` | Reestruturação interna de código, etapa ETL, transformação, modelo ou consulta sem mudar o comportamento esperado. |
+| `test` | Criação, correção ou melhoria de testes de pipeline, dbt, qualidade de dados, schemas ou validações. |
+| `chore` | Manutenção, organização ou configuração sem impacto direto na regra de negócio. |
+| `build` | Alteração em dependências, Docker, empacotamento, ambiente de build ou ferramentas do projeto. |
+| `ci` | Alteração em integração contínua, GitHub Actions, deploy, execução automatizada, agendamento ou orquestração. |
+| `perf` | Melhoria de desempenho sem alterar o comportamento funcional, como otimização de leitura, chunks, queries ou transformações. |
+| `style` | Ajuste de formatação, lint, espaçamento, nomes ou estilo sem alterar lógica. |
 | `revert` | Reversão de uma alteração anterior. |
-| `data` | Modificações em datasets, seeds, dados de teste, mocks, amostras, cargas manuais ou remoção de dados versionados. |
-| `schema` | Mudanças em estrutura de dados, schemas, tabelas, campos, constraints, tipos de colunas ou contratos de dados. |
-| `query` | Alterações em queries SQL, filtros, joins, CTEs, agregações ou regras de consulta. |
-| `config` | Alterações em arquivos de configuração, paths, parâmetros, arquivos `.yml`, `.toml`, `.json` ou configurações de ferramentas. |
-| `env` | Criação ou alteração de variáveis de ambiente, arquivos `.env.example`, conexões com banco ou configurações sensíveis sem expor credenciais reais. |
-| `pipeline` | Criação ou ajuste no fluxo completo do pipeline, incluindo ingestão, carga, transformação, validação e orquestração. |
+| `data` | Modificação em datasets, seeds, dados de teste, mocks, amostras, cargas manuais ou dados versionados. |
+| `schema` | Mudança em estrutura de dados, schemas, tabelas, campos, constraints, tipos de colunas ou contratos de dados. |
+| `query` | Alteração em queries SQL, filtros, joins, CTEs, agregações ou regras de consulta. |
+| `config` | Alteração em arquivos de configuração, paths, parâmetros, `.yml`, `.toml`, `.json` ou configurações de ferramentas. |
+| `env` | Criação ou alteração de variáveis de ambiente, `.env.example`, conexões com banco ou configurações sensíveis sem expor credenciais reais. |
+| `pipeline` | Criação ou ajuste do fluxo de ingestão, carga, transformação, validação ou orquestração. |
 | `visual` | Criação ou ajuste de gráficos, dashboards, relatórios, visualizações analíticas ou logs visuais. |
 | `monitor` | Adição ou ajuste de logs, alertas, verificações de status, auditoria, observabilidade ou monitoramento de pipeline. |
 
-
-## Escopo
-
-Use escopo quando ele deixar claro qual parte do projeto foi alterada.
-
-Formato:
-
-```text
-tipo(escopo): descrição
-```
-
-Exemplos:
-
-```text
-feat(extract): adiciona extração de dados da API
-fix(load): corrige gravação de dados no Supabase
-feat(dbt): adiciona modelos da camada silver
-test(dbt): adiciona testes de unicidade e nulos
-build(docker): adiciona serviços de extract e dbt
-docs(readme): atualiza instruções de instalação
-chore(env): organiza variáveis de ambiente
-```
-
 ## Corpo do commit
 
-O corpo do commit deve conter uma descrição explicativa com até 3 bullet points curtos.
+O corpo do commit deve ser explicativo e ter até 3 bullet points curtos.
 
 Regras:
 
 - Use `-` no início de cada bullet point.
-- Use até 3 bullet points.
 - Explique objetivamente o que foi alterado.
 - Quando relevante, explique também o motivo da alteração.
 - Não repita exatamente a mesma informação do título.
@@ -141,9 +138,7 @@ Confirme que:
 
 - O commit contém apenas uma mudança lógica.
 - Os arquivos alterados pertencem ao mesmo objetivo.
-- A mensagem está em português do Brasil.
-- O título está no presente imperativo.
-- O tipo semântico está correto.
+- A mensagem está em português do Brasil, com tipo semântico correto e título no presente imperativo.
 - O escopo foi usado quando ajuda a dar contexto.
 - O corpo tem até 3 bullet points curtos.
 - Nenhum segredo ou arquivo sensível será versionado.
@@ -153,13 +148,7 @@ Confirme que:
 
 ```bash
 git commit -m "update"
-```
-
-```bash
 git commit -m "ajustes"
-```
-
-```bash
 git commit -m "feat: adicionando função de exportação"
 ```
 
