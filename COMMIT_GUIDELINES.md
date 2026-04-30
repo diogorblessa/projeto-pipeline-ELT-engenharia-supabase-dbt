@@ -11,6 +11,7 @@ Padronizar mensagens de commit para manter o histórico do Git claro, rastreáve
 - Cada commit deve representar uma única mudança lógica, significativa e diretamente relacionada.
 - Prefira commits pequenos, objetivos, revisáveis e, sempre que possível, executáveis e testáveis por si só.
 - Evite mensagens genéricas como `update`, `ajustes`, `correções`, `mudanças`, `wip` ou `alterações gerais`.
+- Todo commit deve conter uma descrição com 2-3 bulletpoints (corpo do commit)
 - Antes de commitar, revise os arquivos alterados e confirme que todos pertencem ao mesmo objetivo.
 
 ## Formato
