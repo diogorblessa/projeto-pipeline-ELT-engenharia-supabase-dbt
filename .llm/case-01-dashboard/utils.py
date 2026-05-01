@@ -1,4 +1,5 @@
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from numbers import Integral, Real
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -130,21 +131,65 @@ def validate_pricing_columns(df: pd.DataFrame) -> pd.DataFrame:
     return validate_columns(df, PRICING_REQUIRED_COLUMNS, PRICING_TABLE)
 
 
+def _to_filter_decimal(value: object) -> Decimal | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, Decimal):
+        decimal_value = value
+    elif isinstance(value, Integral):
+        decimal_value = Decimal(int(value))
+    elif isinstance(value, Real):
+        decimal_value = Decimal(str(value))
+    elif isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            decimal_value = Decimal(text)
+        except InvalidOperation:
+            return None
+    else:
+        return None
+    if not decimal_value.is_finite():
+        return None
+    return decimal_value
+
+
+def _filter_label(value: object) -> str:
+    if pd.isna(value):
+        return ""
+
+    decimal_value = _to_filter_decimal(value)
+    if decimal_value is None:
+        return str(value).strip()
+    if decimal_value == decimal_value.to_integral_value():
+        return str(decimal_value.quantize(Decimal("1")))
+    return format(decimal_value.normalize(), "f")
+
+
+def _filter_option_sort_key(label: str) -> tuple[int, Decimal | str, str]:
+    decimal_value = _to_filter_decimal(label)
+    if decimal_value is None:
+        return (1, label, label)
+    return (0, decimal_value, label)
+
+
 def build_filter_options(values: pd.Series) -> list[str]:
-    clean_values = values.dropna().map(str)
-    return [FILTER_ALL, *sorted(clean_values.unique().tolist())]
+    labels = values.dropna().map(_filter_label).unique().tolist()
+    return [FILTER_ALL, *sorted(labels, key=_filter_option_sort_key)]
 
 
 def filter_equals(df: pd.DataFrame, column: str, selected: str) -> pd.DataFrame:
     if selected == FILTER_ALL:
         return df
-    return df[df[column].astype(str) == str(selected)]
+    return df[df[column].map(_filter_label) == _filter_label(selected)]
 
 
 def filter_in(df: pd.DataFrame, column: str, selected: list[str]) -> pd.DataFrame:
     if not selected:
         return df.iloc[0:0]
-    return df[df[column].astype(str).isin([str(value) for value in selected])]
+    selected_labels = {_filter_label(value) for value in selected}
+    return df[df[column].map(_filter_label).isin(selected_labels)]
 
 
 def fmt_brl(value: float) -> str:

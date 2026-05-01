@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pandas as pd
 import plotly.graph_objects as go
 import pytest
@@ -179,6 +181,21 @@ class TestFilterHelpers:
 
         assert utils.build_filter_options(values) == ["Todos", "2024", "2025", "2026"]
 
+    def test_build_filter_options_sorts_numeric_values_by_number(self):
+        values = pd.Series([10, 2, 1])
+
+        assert utils.build_filter_options(values) == ["Todos", "1", "2", "10"]
+
+    def test_build_filter_options_canonicalizes_integral_float_and_decimal_values(self):
+        values = pd.Series([2026.0, Decimal("2025.00"), pd.NA, Decimal("2026.00")])
+
+        assert utils.build_filter_options(values) == ["Todos", "2025", "2026"]
+
+    def test_build_filter_options_strips_string_values(self):
+        values = pd.Series([" B ", "A", None, "A "])
+
+        assert utils.build_filter_options(values) == ["Todos", "A", "B"]
+
     def test_filter_equals_returns_dataframe_unchanged_for_all(self):
         df = pd.DataFrame({"categoria": ["A", "B"]})
 
@@ -199,6 +216,20 @@ class TestFilterHelpers:
         result = utils.filter_equals(df, "ano_venda", "2026")
 
         assert result["ano_venda"].tolist() == [2026, 2026]
+
+    def test_filter_equals_matches_integral_float_and_decimal_from_string_selection(self):
+        df = pd.DataFrame({"ano_venda": [2025, 2026.0, Decimal("2026.00")]})
+
+        result = utils.filter_equals(df, "ano_venda", "2026")
+
+        assert result["ano_venda"].tolist() == [2026.0, Decimal("2026.00")]
+
+    def test_filter_equals_strips_string_values_before_comparing(self):
+        df = pd.DataFrame({"categoria": [" A ", "B", "A"]})
+
+        result = utils.filter_equals(df, "categoria", "A")
+
+        assert result["categoria"].tolist() == [" A ", "A"]
 
     def test_filter_in_returns_empty_dataframe_for_empty_selection(self):
         df = pd.DataFrame({"categoria": ["A", "B"]})
@@ -221,6 +252,13 @@ class TestFilterHelpers:
         result = utils.filter_in(df, "ano_venda", ["2024", "2026"])
 
         assert result["ano_venda"].tolist() == [2024, 2026]
+
+    def test_filter_in_matches_mixed_numeric_representations_from_string_selections(self):
+        df = pd.DataFrame({"ano_venda": [2024, 2025.0, Decimal("2026.00"), 2026.5]})
+
+        result = utils.filter_in(df, "ano_venda", ["2024", "2026"])
+
+        assert result["ano_venda"].tolist() == [2024, Decimal("2026.00")]
 
 
 class TestFmtBrl:
