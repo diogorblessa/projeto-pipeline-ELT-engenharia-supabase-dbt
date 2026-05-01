@@ -35,6 +35,9 @@ logs/
 docs/*
 !docs/superpowers/
 
+# Git worktrees (isolated workspaces)
+.worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
