@@ -81,25 +81,27 @@ def inject_css():
         [data-testid="stDataFrame"] {
             color: #0F172A;
         }
-        .stTabs [data-baseweb="tab-list"] {
+        [data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex;
+            flex-wrap: wrap;
             gap: 0.5rem;
             margin-bottom: 1.5rem;
         }
-        .stTabs [data-baseweb="tab"] {
+        [data-testid="stRadio"] div[role="radiogroup"] label {
             background-color: #FFFFFF;
             border: 1px solid #CBD5E1;
             border-radius: 8px;
             color: #334155;
             font-weight: 700;
-            height: 44px;
-            padding: 0 1rem;
+            min-height: 44px;
+            padding: 0.45rem 1rem;
         }
-        .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
             background-color: #EFF6FF;
             border-color: #0072B2;
             color: #0F172A;
         }
-        .stTabs [data-baseweb="tab"] p {
+        [data-testid="stRadio"] div[role="radiogroup"] label p {
             font-weight: 700;
         }
         .insight-box {
@@ -142,19 +144,24 @@ def main():
     inject_css()
     render_sidebar_shell()
 
-    vendas_tab, clientes_tab, pricing_tab = st.tabs(["Vendas", "Clientes", "Pricing"])
+    page = st.radio(
+        "Página",
+        options=["Vendas", "Clientes", "Pricing"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="main_page",
+    )
+    st.divider()
 
-    with vendas_tab:
+    if page == "Vendas":
         from views.vendas import render
 
         render()
-
-    with clientes_tab:
+    elif page == "Clientes":
         from views.clientes import render
 
         render()
-
-    with pricing_tab:
+    else:
         from views.pricing import render
 
         render()
