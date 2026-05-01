@@ -34,6 +34,14 @@ def render():
         st.error("Não foi possível conectar ao banco de dados.")
         return
 
+    try:
+        _render_sales_page(df)
+    except Exception:
+        st.error("Não foi possível renderizar a página de vendas.")
+        return
+
+
+def _render_sales_page(df: pd.DataFrame) -> None:
     with st.sidebar:
         st.markdown("#### Filtros - Vendas")
         ano_sel = st.selectbox(
