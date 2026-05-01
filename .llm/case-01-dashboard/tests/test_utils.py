@@ -15,7 +15,7 @@ from utils import (
     month_filter_options,
     normalize_sales_columns,
 )
-from views import clientes
+from views import clientes, pricing
 
 
 def _dataframe_with_columns(columns: tuple[str, ...]) -> pd.DataFrame:
@@ -301,6 +301,95 @@ class TestClientesHelpers:
         result = clientes._top_customers(df, 2)
 
         assert result["nome_cliente"].tolist() == ["Cliente A", "Cliente C"]
+
+
+class TestPricingHelpers:
+    def test_apply_pricing_filters_uses_category_brand_and_raw_classification(self):
+        df = pd.DataFrame(
+            {
+                "produto_id": [1, 2, 3],
+                "categoria": ["Eletrônicos", "Eletrônicos", "Casa"],
+                "marca": ["Marca A", "Marca B", "Marca A"],
+                "classificacao_preco": [
+                    "MAIS_CARO_QUE_TODOS",
+                    "ACIMA_DA_MEDIA",
+                    "MAIS_CARO_QUE_TODOS",
+                ],
+            }
+        )
+
+        result = pricing._apply_pricing_filters(
+            df,
+            categories=["Eletrônicos"],
+            brands=["Marca A"],
+            classifications=["MAIS_CARO_QUE_TODOS"],
+        )
+
+        assert result["produto_id"].tolist() == [1]
+
+    def test_apply_pricing_filters_returns_empty_for_empty_selection(self):
+        df = pd.DataFrame(
+            {
+                "produto_id": [1],
+                "categoria": ["Eletrônicos"],
+                "marca": ["Marca A"],
+                "classificacao_preco": ["MAIS_CARO_QUE_TODOS"],
+            }
+        )
+
+        result = pricing._apply_pricing_filters(
+            df,
+            categories=[],
+            brands=["Marca A"],
+            classifications=["MAIS_CARO_QUE_TODOS"],
+        )
+
+        assert result.empty
+
+    def test_pricing_metrics_calculates_revenue_risk_and_exposure_category(self):
+        df = pd.DataFrame(
+            {
+                "produto_id": [1, 2, 3],
+                "categoria": ["Eletrônicos", "Casa", "Eletrônicos"],
+                "classificacao_preco": [
+                    "MAIS_CARO_QUE_TODOS",
+                    "ACIMA_DA_MEDIA",
+                    "MAIS_CARO_QUE_TODOS",
+                ],
+                "diferenca_percentual_vs_media": [12.0, 4.0, 8.0],
+                "receita_total": [1000.0, 500.0, 3000.0],
+            }
+        )
+
+        metrics = pricing._pricing_metrics(df)
+
+        assert metrics["total_produtos"] == 3
+        assert metrics["mais_caros"] == 2
+        assert metrics["acima_media"] == 1
+        assert metrics["receita_total"] == 4500.0
+        assert metrics["receita_risco"] == 4000.0
+        assert metrics["pct_receita_risco"] == pytest.approx(88.8888888889)
+        assert metrics["categoria_maior_exposicao"] == "Eletrônicos"
+
+    def test_executive_narrative_mentions_risk_context_and_decision_caution(self):
+        metrics = {
+            "total_produtos": 3,
+            "dif_media": 8.0,
+            "mais_caros": 2,
+            "receita_risco": 4000.0,
+            "pct_receita_risco": 88.9,
+            "categoria_maior_exposicao": "Eletrônicos",
+        }
+
+        narrative = pricing._build_executive_narrative(metrics)
+
+        assert "3 produtos monitorados" in narrative
+        assert "+8.0%" in narrative
+        assert "2 produtos mais caros que todos os concorrentes" in narrative
+        assert "R$ 4.000,00" in narrative
+        assert "+88.9%" in narrative
+        assert "Eletrônicos" in narrative
+        assert "margem, estoque e posicionamento" in narrative
 
 
 class TestFmtBrl:
