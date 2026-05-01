@@ -229,6 +229,10 @@ def classification_label(value: str) -> str:
     return CLASS_LABELS.get(value, str(value).replace("_", " ").title())
 
 
+def segment_label(value: str) -> str:
+    return SEGMENT_LABELS.get(value, str(value))
+
+
 def month_filter_options(months: pd.Series) -> list[int]:
     clean = pd.to_numeric(months, errors="coerce").dropna().astype(int)
     return sorted(clean.unique().tolist())

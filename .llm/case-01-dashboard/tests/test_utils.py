@@ -496,3 +496,17 @@ class TestKpiCard:
     def test_contem_cor_tema(self):
         html = kpi_card("Label", "Value", "#009E73")
         assert "#009E73" in html
+
+
+class TestSegmentLabel:
+    def test_formats_known_segments_for_display(self):
+        from utils import segment_label
+
+        assert segment_label("VIP") == "VIP"
+        assert segment_label("TOP_TIER") == "Top tier"
+        assert segment_label("REGULAR") == "Regular"
+
+    def test_falls_back_to_raw_value_for_unknown_segments(self):
+        from utils import segment_label
+
+        assert segment_label("DESCONHECIDO") == "DESCONHECIDO"
