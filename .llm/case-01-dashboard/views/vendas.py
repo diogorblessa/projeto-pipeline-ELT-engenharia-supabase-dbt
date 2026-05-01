@@ -1,8 +1,22 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 from db import get_data
-from utils import fmt_brl, fmt_int, kpi_card, apply_chart_style, DAY_ORDER
+from utils import (
+    DAY_ORDER,
+    FILTER_ALL,
+    MissingColumnsError,
+    apply_chart_style,
+    build_filter_options,
+    filter_equals,
+    fmt_brl,
+    fmt_brl_compact,
+    fmt_int,
+    kpi_card,
+    month_filter_options,
+    normalize_sales_columns,
+    validate_sales_columns,
+)
 
 THEME_COLOR = "#0072B2"
 QUERY = "SELECT * FROM public_gold_sales.gold_sales_vendas_temporais"
@@ -11,26 +25,48 @@ QUERY = "SELECT * FROM public_gold_sales.gold_sales_vendas_temporais"
 def render():
     try:
         df = get_data(QUERY)
-    except Exception as e:
-        st.error(f"Erro ao conectar com o banco de dados: {e}")
+        df = normalize_sales_columns(df)
+        validate_sales_columns(df)
+    except MissingColumnsError as e:
+        st.error(str(e))
+        return
+    except Exception:
+        st.error("Não foi possível conectar ao banco de dados.")
         return
 
-    # Filtro de mês na sidebar
-    meses = sorted(df["mes_venda"].unique().tolist())
     with st.sidebar:
-        mes_sel = st.selectbox("Mês", ["Todos"] + [str(m) for m in meses], key="vendas_mes")
+        st.markdown("#### Filtros - Vendas")
+        ano_sel = st.selectbox(
+            "Ano",
+            build_filter_options(df["ano_venda"]),
+            key="vendas_ano",
+        )
+        mes_sel = st.selectbox(
+            "Mês",
+            [FILTER_ALL, *[str(mes) for mes in month_filter_options(df["mes_venda"])]],
+            key="vendas_mes",
+        )
+        dia_sel = st.selectbox(
+            "Dia da Semana",
+            [FILTER_ALL, *DAY_ORDER],
+            key="vendas_dia_semana",
+        )
 
-    df_f = df if mes_sel == "Todos" else df[df["mes_venda"] == int(mes_sel)]
+    df_f = filter_equals(df, "ano_venda", ano_sel)
+    if mes_sel != FILTER_ALL:
+        df_f = df_f[df_f["mes_venda"] == int(mes_sel)]
+    df_f = filter_equals(df_f, "dia_semana_nome", dia_sel)
+    if df_f.empty:
+        st.warning("Nenhum dado encontrado para os filtros selecionados.")
+        return
 
-    # Header
     st.markdown(
-        f"<h1 style='color:#1A2332;font-size:28px;font-weight:700;"
+        f"<h1 style='color:#0F172A;font-size:28px;font-weight:700;"
         f"border-bottom:3px solid {THEME_COLOR};padding-bottom:8px;margin-bottom:24px'>"
         f"📈 Vendas</h1>",
         unsafe_allow_html=True,
     )
 
-    # KPIs
     receita = float(df_f["receita_total"].sum())
     total_vendas = int(df_f["total_vendas"].sum())
     ticket = receita / total_vendas if total_vendas > 0 else 0.0
@@ -47,14 +83,25 @@ def render():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Gráfico 1 — Receita Diária (full width)
-    df_daily = df_f.groupby("data_venda")["receita_total"].sum().reset_index()
+    df_daily = df_f.groupby("data_venda", as_index=False)["receita_total"].sum()
     df_daily["data_venda"] = pd.to_datetime(df_daily["data_venda"])
-    fig1 = px.line(df_daily, x="data_venda", y="receita_total")
+    df_daily["receita_label"] = df_daily["receita_total"].map(fmt_brl_compact)
+    fig1 = px.line(
+        df_daily,
+        x="data_venda",
+        y="receita_total",
+        text="receita_label",
+        labels={"data_venda": "Data da venda", "receita_total": "Receita total"},
+    )
     fig1.update_traces(
-        line_color=THEME_COLOR,
+        customdata=df_daily[["receita_label"]],
         fill="tozeroy",
-        fillcolor="rgba(0,114,178,0.10)",
+        fillcolor="rgba(0,114,178,0.12)",
+        hovertemplate="Data: %{x|%d/%m/%Y}<br>Receita: %{customdata[0]}<extra></extra>",
+        line_color=THEME_COLOR,
+        mode="lines+markers+text",
+        textfont=dict(color="#0F172A", size=10),
+        textposition="top center",
     )
     st.plotly_chart(
         apply_chart_style(fig1, "Receita Diária"),
@@ -62,18 +109,26 @@ def render():
         config={"displayModeBar": False},
     )
 
-    # Gráficos 2 e 3 — lado a lado
     col_a, col_b = st.columns(2)
 
-    df_dow = df_f.groupby("dia_semana_nome")["receita_total"].sum().reset_index()
+    df_dow = df_f.groupby("dia_semana_nome", as_index=False)["receita_total"].sum()
     df_dow["dia_semana_nome"] = pd.Categorical(
         df_dow["dia_semana_nome"], categories=DAY_ORDER, ordered=True
     )
+    df_dow = df_dow.sort_values("dia_semana_nome")
+    df_dow["receita_label"] = df_dow["receita_total"].map(fmt_brl_compact)
     fig2 = px.bar(
-        df_dow.sort_values("dia_semana_nome"),
+        df_dow,
         x="dia_semana_nome",
         y="receita_total",
+        text="receita_label",
         color_discrete_sequence=["#E69F00"],
+        labels={"dia_semana_nome": "Dia da semana", "receita_total": "Receita total"},
+    )
+    fig2.update_traces(
+        hovertemplate="Dia: %{x}<br>Receita: %{text}<extra></extra>",
+        textfont=dict(color="#0F172A", size=11),
+        textposition="outside",
     )
     col_a.plotly_chart(
         apply_chart_style(fig2, "Receita por Dia da Semana"),
@@ -81,10 +136,20 @@ def render():
         config={"displayModeBar": False},
     )
 
-    df_hora = df_f.groupby("hora_venda")["total_vendas"].sum().reset_index()
+    df_hora = df_f.groupby("hora_venda", as_index=False)["total_vendas"].sum()
+    df_hora["vendas_label"] = df_hora["total_vendas"].map(fmt_int)
     fig3 = px.bar(
-        df_hora, x="hora_venda", y="total_vendas",
+        df_hora,
+        x="hora_venda",
+        y="total_vendas",
+        text="vendas_label",
         color_discrete_sequence=["#56B4E9"],
+        labels={"hora_venda": "Hora da venda", "total_vendas": "Total de vendas"},
+    )
+    fig3.update_traces(
+        hovertemplate="Hora: %{x}h<br>Vendas: %{text}<extra></extra>",
+        textfont=dict(color="#0F172A", size=11),
+        textposition="outside",
     )
     col_b.plotly_chart(
         apply_chart_style(fig3, "Volume de Vendas por Hora"),
