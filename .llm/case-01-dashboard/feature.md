@@ -82,7 +82,7 @@ e `dbt`; o dashboard roda localmente via Streamlit.
 
 - Clientes por Segmento: barra horizontal com total e percentual.
 - Receita por Segmento: barras com rótulos em R$.
-- Top 10 Clientes por Receita: barras horizontais com rótulos em R$.
+- Top N Clientes por Receita: barras horizontais com rótulos em R$ conforme o filtro selecionado.
 - Receita por Estado: barras horizontais com rótulos em R$ e contexto de clientes no hover.
 
 **Tabela detalhada:** exibe nomes de colunas legíveis e valores monetários em R$.

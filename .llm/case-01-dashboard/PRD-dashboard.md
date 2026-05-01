@@ -95,14 +95,14 @@ POSTGRES_URL=postgresql+psycopg2://<user>:<password>@<host>:5432/postgres
 |---|---|---|
 | Total de Clientes | `COUNT(*)` | XXX |
 | Clientes VIP | `COUNT(*) WHERE segmento_cliente = 'VIP'` | XX |
-| Receita VIP | `SUM(receita_total) WHERE segmento_cliente = 'VIP'` | R$ XXX.XXX,XX |
-| Ticket Médio Geral | `AVG(ticket_medio)` | R$ XXX,XX |
+| Receita Total | `SUM(receita_total)` | R$ XXX.XXX,XX |
+| Ticket Médio | `AVG(ticket_medio)` | R$ XXX,XX |
 
 **Gráficos:**
 
 - Clientes por Segmento: barra horizontal com total e percentual.
 - Receita por Segmento: barras com rótulos monetários.
-- Top 10 Clientes por Receita: barras horizontais.
+- Top N Clientes por Receita: barras horizontais conforme o filtro selecionado.
 - Receita por Estado: barras horizontais ordenadas por receita, com contexto de clientes no hover.
 
 **Tabela detalhada:** deve exibir nomes de colunas legíveis e valores monetários em R$.
