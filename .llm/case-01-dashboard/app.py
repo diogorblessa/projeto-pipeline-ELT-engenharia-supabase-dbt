@@ -1,5 +1,6 @@
-import streamlit as st
 from pathlib import Path
+
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
@@ -22,27 +23,93 @@ def inject_css():
             font-family: 'Plus Jakarta Sans', sans-serif !important;
         }
         .stApp {
-            background-color: #F0F4F8;
+            background-color: #F8FAFC;
         }
         [data-testid="stSidebar"] {
-            background-color: #1A2B4A !important;
+            background-color: #FFFFFF !important;
+            border-right: 1px solid #E2E8F0;
         }
-        [data-testid="stSidebar"] * {
-            color: #FFFFFF !important;
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+            color: #0F172A;
         }
-        [data-testid="stSidebar"] .stRadio label {
-            font-size: 15px !important;
-            font-weight: 500 !important;
-        }
-        [data-testid="stSidebar"] .stSelectbox label,
-        [data-testid="stSidebar"] .stMultiSelect label {
+        [data-testid="stSidebar"] label {
+            color: #334155 !important;
             font-size: 13px !important;
-            color: #94A3B8 !important;
+            font-weight: 700 !important;
+        }
+        .sidebar-brand {
+            padding: 0.25rem 0 0.75rem;
+        }
+        .sidebar-eyebrow {
+            color: #0072B2;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.35rem;
+        }
+        .sidebar-title {
+            color: #0F172A;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0 0 0.4rem;
+        }
+        .sidebar-description {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.45;
+            margin: 0;
+        }
+        .sidebar-section-title {
+            color: #64748B;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 0.35rem 0 0.75rem;
+            text-transform: uppercase;
         }
         .block-container {
             padding-top: 2rem !important;
             padding-left: 2.5rem !important;
             padding-right: 2.5rem !important;
+        }
+        h1, h2, h3, h4, h5, h6, p, label {
+            color: #0F172A;
+        }
+        [data-testid="stMarkdownContainer"] h3 {
+            color: #0F172A;
+            font-weight: 700;
+        }
+        [data-testid="stDataFrame"] {
+            color: #0F172A;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background-color: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+            color: #334155;
+            font-weight: 700;
+            height: 44px;
+            padding: 0 1rem;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] {
+            background-color: #EFF6FF;
+            border-color: #0072B2;
+            color: #0F172A;
+        }
+        .stTabs [data-baseweb="tab"] p {
+            font-weight: 700;
+        }
+        .insight-box {
+            background-color: #FFFBEB;
+            border: 1px solid #FCD34D;
+            border-left: 4px solid #E69F00;
+            border-radius: 8px;
+            color: #0F172A;
+            line-height: 1.55;
+            padding: 1rem;
         }
         </style>
         """,
@@ -50,35 +117,46 @@ def inject_css():
     )
 
 
-def sidebar_nav() -> str:
+def render_sidebar_shell() -> None:
     with st.sidebar:
         st.markdown(
-            "<h2 style='color:#FFFFFF;font-size:20px;font-weight:700;margin-bottom:0'>📊 E-commerce</h2>"
-            "<p style='color:#94A3B8;font-size:13px;margin-top:2px;margin-bottom:0'>Analytics Dashboard</p>",
+            """
+            <div class="sidebar-brand">
+                <div class="sidebar-eyebrow">E-commerce Analytics</div>
+                <h1 class="sidebar-title">Relatório Analítico</h1>
+                <p class="sidebar-description">
+                    Visão estratégica de vendas, clientes e pricing.
+                </p>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
         st.divider()
-        page = st.radio(
-            "Navegação",
-            options=["📈 Vendas", "👥 Clientes", "💰 Pricing"],
-            label_visibility="collapsed",
+        st.markdown(
+            '<div class="sidebar-section-title">Filtros</div>',
+            unsafe_allow_html=True,
         )
-        st.divider()
-    return page
 
 
 def main():
     inject_css()
-    page = sidebar_nav()
+    render_sidebar_shell()
 
-    if page == "📈 Vendas":
+    vendas_tab, clientes_tab, pricing_tab = st.tabs(["Vendas", "Clientes", "Pricing"])
+
+    with vendas_tab:
         from views.vendas import render
+
         render()
-    elif page == "👥 Clientes":
+
+    with clientes_tab:
         from views.clientes import render
+
         render()
-    elif page == "💰 Pricing":
+
+    with pricing_tab:
         from views.pricing import render
+
         render()
 
 
