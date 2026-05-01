@@ -15,6 +15,7 @@ from utils import (
     month_filter_options,
     normalize_sales_columns,
 )
+from views import clientes
 
 
 def _dataframe_with_columns(columns: tuple[str, ...]) -> pd.DataFrame:
@@ -259,6 +260,47 @@ class TestFilterHelpers:
         result = utils.filter_in(df, "ano_venda", ["2024", "2026"])
 
         assert result["ano_venda"].tolist() == [2024, Decimal("2026.00")]
+
+
+class TestClientesHelpers:
+    def test_segment_filter_options_keep_raw_values_with_readable_labels(self):
+        df = pd.DataFrame({"segmento_cliente": ["TOP_TIER", "VIP", "REGULAR", "VIP"]})
+
+        options = clientes._segment_filter_options(df)
+
+        assert options == ["Todos", "REGULAR", "TOP_TIER", "VIP"]
+        assert [clientes._segment_label(option) for option in options] == [
+            "Todos",
+            "Regular",
+            "Top tier",
+            "VIP",
+        ]
+
+    def test_apply_customer_filters_uses_segment_and_state(self):
+        df = pd.DataFrame(
+            {
+                "cliente_id": [1, 2, 3],
+                "segmento_cliente": ["VIP", "REGULAR", "VIP"],
+                "estado": ["SP", "RJ", "RJ"],
+            }
+        )
+
+        result = clientes._apply_customer_filters(df, "VIP", "RJ")
+
+        assert result["cliente_id"].tolist() == [3]
+
+    def test_top_customers_limits_by_top_n_and_preserves_ranking_order(self):
+        df = pd.DataFrame(
+            {
+                "nome_cliente": ["Cliente A", "Cliente B", "Cliente C"],
+                "receita_total": [300.0, 100.0, 200.0],
+                "ranking_receita": [1, 3, 2],
+            }
+        )
+
+        result = clientes._top_customers(df, 2)
+
+        assert result["nome_cliente"].tolist() == ["Cliente A", "Cliente C"]
 
 
 class TestFmtBrl:
