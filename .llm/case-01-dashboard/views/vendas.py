@@ -90,7 +90,6 @@ def render():
         df_daily,
         x="data_venda",
         y="receita_total",
-        text="receita_label",
         labels={"data_venda": "Data da venda", "receita_total": "Receita total"},
     )
     fig1.update_traces(
@@ -99,9 +98,7 @@ def render():
         fillcolor="rgba(0,114,178,0.12)",
         hovertemplate="Data: %{x|%d/%m/%Y}<br>Receita: %{customdata[0]}<extra></extra>",
         line_color=THEME_COLOR,
-        mode="lines+markers+text",
-        textfont=dict(color="#0F172A", size=10),
-        textposition="top center",
+        mode="lines+markers",
     )
     st.plotly_chart(
         apply_chart_style(fig1, "Receita Diária"),
