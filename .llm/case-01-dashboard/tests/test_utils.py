@@ -174,6 +174,11 @@ class TestFilterHelpers:
 
         assert utils.build_filter_options(values) == ["Todos", "A", "B", "C"]
 
+    def test_build_filter_options_returns_numeric_values_as_strings(self):
+        values = pd.Series([2026, 2024, pd.NA, 2026, 2025], dtype="Int64")
+
+        assert utils.build_filter_options(values) == ["Todos", "2024", "2025", "2026"]
+
     def test_filter_equals_returns_dataframe_unchanged_for_all(self):
         df = pd.DataFrame({"categoria": ["A", "B"]})
 
@@ -187,6 +192,13 @@ class TestFilterHelpers:
         result = utils.filter_equals(df, "categoria", "A")
 
         assert result["categoria"].tolist() == ["A", "A"]
+
+    def test_filter_equals_matches_numeric_column_from_string_selection(self):
+        df = pd.DataFrame({"ano_venda": [2025, 2026, 2026]})
+
+        result = utils.filter_equals(df, "ano_venda", "2026")
+
+        assert result["ano_venda"].tolist() == [2026, 2026]
 
     def test_filter_in_returns_empty_dataframe_for_empty_selection(self):
         df = pd.DataFrame({"categoria": ["A", "B"]})
@@ -202,6 +214,13 @@ class TestFilterHelpers:
         result = utils.filter_in(df, "categoria", ["A", "C"])
 
         assert result["categoria"].tolist() == ["A", "C"]
+
+    def test_filter_in_matches_numeric_column_from_string_selections(self):
+        df = pd.DataFrame({"ano_venda": [2024, 2025, 2026]})
+
+        result = utils.filter_in(df, "ano_venda", ["2024", "2026"])
+
+        assert result["ano_venda"].tolist() == [2024, 2026]
 
 
 class TestFmtBrl:

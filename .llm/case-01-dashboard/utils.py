@@ -138,13 +138,13 @@ def build_filter_options(values: pd.Series) -> list[str]:
 def filter_equals(df: pd.DataFrame, column: str, selected: str) -> pd.DataFrame:
     if selected == FILTER_ALL:
         return df
-    return df[df[column] == selected]
+    return df[df[column].astype(str) == str(selected)]
 
 
 def filter_in(df: pd.DataFrame, column: str, selected: list[str]) -> pd.DataFrame:
     if not selected:
         return df.iloc[0:0]
-    return df[df[column].isin(selected)]
+    return df[df[column].astype(str).isin([str(value) for value in selected])]
 
 
 def fmt_brl(value: float) -> str:
