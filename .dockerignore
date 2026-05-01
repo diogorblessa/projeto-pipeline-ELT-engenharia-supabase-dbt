@@ -25,6 +25,9 @@ transform/dbt_packages
 .idea
 .claude
 .llm
+!.llm/case-01-dashboard/
+.llm/case-01-dashboard/*
+!.llm/case-01-dashboard/pyproject.toml
 docs
 *.md
 !README.md

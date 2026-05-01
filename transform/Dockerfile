@@ -12,6 +12,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY extract_load/pyproject.toml extract_load/
 COPY transform/pyproject.toml transform/
+COPY .llm/case-01-dashboard/pyproject.toml .llm/case-01-dashboard/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package transform

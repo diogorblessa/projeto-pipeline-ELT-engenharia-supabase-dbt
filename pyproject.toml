@@ -5,7 +5,7 @@ description = "Pipeline ELT: S3 -> PostgreSQL -> dbt (Bronze/Silver/Gold)"
 requires-python = ">=3.11"
 
 [tool.uv.workspace]
-members = ["extract_load", "transform"]
+members = ["extract_load", "transform", ".llm/case-01-dashboard"]
 
 [dependency-groups]
 dev = [
@@ -27,5 +27,6 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "S", "SIM", "RUF"]
 
 # ---- pytest ----
 [tool.pytest.ini_options]
-testpaths = ["extract_load/tests"]
+testpaths = ["extract_load/tests", ".llm/case-01-dashboard/tests"]
+pythonpath = ["extract_load/src", ".llm/case-01-dashboard"]
 addopts = "-ra --strict-markers"
