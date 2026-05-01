@@ -2,228 +2,157 @@
 
 ## Contexto
 
-Dashboard para 3 diretores de um e-commerce consumirem os Data Marts gold do banco PostgreSQL (Supabase). Cada diretor tem necessidades distintas. O dashboard deve ser self-service: abrir, selecionar filtros, ver os numeros.
+Dashboard para três diretores de um e-commerce consumirem os Data Marts Gold do
+PostgreSQL/Supabase. Cada diretor tem uma página dedicada e deve conseguir abrir o app,
+selecionar filtros e ver números claros sem consultar SQL.
 
-**Banco:** PostgreSQL (Supabase)
-**Referencia tecnica:** Ler o arquivo `database.md` para schemas completos, colunas, tipos e regras de negocio.
-
----
+**Referência técnica:** `.llm/database.md`
 
 ## Arquitetura
 
+```text
+Supabase PostgreSQL
+  public_gold_sales.gold_sales_vendas_temporais
+  public_gold_cs.gold_customer_success_clientes_segmentacao
+  public_gold_pricing.gold_pricing_precos_competitividade
+        |
+        v
+Streamlit App (.llm/case-01-dashboard/app.py)
+  views/vendas.py
+  views/clientes.py
+  views/pricing.py
 ```
-Supabase (PostgreSQL)
-    │
-    ├── public_gold_sales.gold_sales_vendas_temporais
-    ├── public_gold_cs.gold_customer_success_clientes_segmentacao
-    └── public_gold_pricing.gold_pricing_precos_competitividade
-            │
-            ▼
-    Streamlit App (app.py)
-    ├── Pagina: Vendas
-    ├── Pagina: Clientes
-    └── Pagina: Pricing
+
+O `docker-compose.yml` atual não publica o dashboard. Ele continua focado em `extract` e `dbt`.
+O dashboard roda localmente via Streamlit.
+
+## Conexão com o banco
+
+- Variável obrigatória: `POSTGRES_URL`.
+- Fonte padrão: `.env` da raiz do projeto, carregado por `app.py`.
+- `.llm/case-01-dashboard/.env.example` existe apenas como placeholder local, sem segredos.
+- A conexão usa SQLAlchemy e `pandas.read_sql`.
+- Se `POSTGRES_URL` estiver ausente ou inválida, o app mostra erro amigável.
+
+Exemplo sem credenciais reais:
+
+```env
+POSTGRES_URL=postgresql+psycopg2://<user>:<password>@<host>:5432/postgres
 ```
 
-**Stack:**
-- Python 3.10+
-- Streamlit
-- SQLAlchemy (engine de conexao)
-- psycopg2-binary (driver PostgreSQL)
-- pandas
-- plotly (graficos interativos)
-- python-dotenv (variaveis de ambiente)
-- pyyaml (leitura do profiles.yml no dev local)
+## Requisitos gerais
 
----
+- Layout wide.
+- Valores monetários em formato brasileiro com `R$`.
+- Textos em português do Brasil com acentuação correta.
+- Cores com contraste suficiente no fundo claro.
+- Rótulos numéricos visíveis nos gráficos principais.
+- Sem cache agressivo, pois os marts mudam após cada `dbt run`.
+- Não alterar regras de negócio nem schemas dbt para atender ao dashboard.
+- Validar colunas obrigatórias antes de calcular KPIs ou renderizar gráficos.
+- Mostrar mensagens amigáveis para conexão inválida, colunas ausentes e filtros sem dados.
 
-## Conexao com o Banco
+## Página 1 - Vendas
 
-Estrategia de dois estagios via SQLAlchemy engine (`@st.cache_resource`):
-
-1. **Docker / producao:** usa `POSTGRES_URL` do `.env` diretamente
-   ```
-   POSTGRES_URL=postgresql://usuario:senha@host:5432/postgres
-   ```
-
-2. **Dev local (fallback):** le `~/.dbt/profiles.yml` via PyYAML e monta a connection string a partir de `ecommerce > outputs > dev`
-
-Criar funcao de conexao reutilizavel que retorne um `pandas.DataFrame` a partir de uma query SQL via `engine.connect()`.
-
----
-
-## Estrutura do App
-
-### Sidebar
-
-- Titulo do dashboard: "E-commerce Analytics"
-- Navegacao entre as 3 paginas usando `st.sidebar.selectbox` ou `st.sidebar.radio`:
-  - Vendas
-  - Clientes
-  - Pricing
-
-### Pagina 1: Vendas (Diretor Comercial)
+**Diretor:** Comercial
 
 **Tabela fonte:** `public_gold_sales.gold_sales_vendas_temporais`
 
-**KPIs no topo (metricas grandes com st.metric):**
+**Contrato do mart:**
 
-| KPI | Calculo | Formato |
-| --- | ------- | ------- |
-| Receita Total | SUM(receita_total) | R$ XXX.XXX,XX |
-| Total de Vendas | SUM(total_vendas) | X.XXX |
-| Ticket Medio | Receita Total / Total de Vendas | R$ XXX,XX |
-| Clientes Unicos | SUM(total_clientes_unicos) ponderado ou MAX por dia | XXX |
+- `dia_da_semana` é o nome atual da coluna de dia da semana.
+- O dashboard aceita também `dia_semana_nome` para compatibilidade.
+- `mes_venda` pode chegar como decimal no pandas e deve ser convertido para inteiro.
 
-Mostrar os 4 KPIs em uma linha usando `st.columns(4)`.
+**Filtros:** Ano, Mês e Dia da Semana.
 
-**Grafico 1 - Receita por Dia (linha):**
-- Eixo X: `data_venda`
-- Eixo Y: `SUM(receita_total)` agrupado por `data_venda`
-- Titulo: "Receita Diaria"
-- Usar plotly `px.line`
+**KPIs:**
 
-**Grafico 2 - Receita por Dia da Semana (barras):**
-- Eixo X: `dia_semana_nome` (ordem: Segunda, Terca, ..., Domingo)
-- Eixo Y: `SUM(receita_total)` agrupado por `dia_semana_nome`
-- Titulo: "Receita por Dia da Semana"
-- Usar plotly `px.bar`
+| KPI | Cálculo | Formato |
+|---|---|---|
+| Receita Total | `SUM(receita_total)` | R$ XXX.XXX,XX |
+| Total de Vendas | `SUM(total_vendas)` | X.XXX |
+| Ticket Médio | Receita Total / Total de Vendas | R$ XXX,XX |
+| Clientes Únicos | soma do máximo diário de `total_clientes_unicos` | XXX |
 
-**Grafico 3 - Vendas por Hora (barras):**
-- Eixo X: `hora_venda` (0-23)
-- Eixo Y: `SUM(total_vendas)` agrupado por `hora_venda`
-- Titulo: "Volume de Vendas por Hora"
-- Usar plotly `px.bar`
+**Gráficos:**
 
-**Filtro opcional:** Seletor de mes (`mes_venda`) no topo da pagina.
+- Receita Diária: linha com área preenchida e rótulos monetários compactos.
+- Receita por Dia da Semana: barras ordenadas de Segunda a Domingo.
+- Volume de Vendas por Hora: barras com rótulos de quantidade.
 
----
+## Página 2 - Clientes
 
-### Pagina 2: Clientes (Diretora de Customer Success)
+**Diretora:** Customer Success
 
 **Tabela fonte:** `public_gold_cs.gold_customer_success_clientes_segmentacao`
 
-**KPIs no topo (st.metric):**
+**Filtros:** Segmento, Estado e Top N Clientes.
 
-| KPI | Calculo | Formato |
-| --- | ------- | ------- |
-| Total Clientes | COUNT(*) | XXX |
-| Clientes VIP | COUNT(*) WHERE segmento_cliente = 'VIP' | XX |
-| Receita VIP | SUM(receita_total) WHERE segmento_cliente = 'VIP' | R$ XXX.XXX |
-| Ticket Medio Geral | AVG(ticket_medio) | R$ XXX,XX |
+**KPIs:**
 
-Mostrar os 4 KPIs em uma linha usando `st.columns(4)`.
+| KPI | Cálculo | Formato |
+|---|---|---|
+| Total de Clientes | `COUNT(*)` | XXX |
+| Clientes VIP | `COUNT(*) WHERE segmento_cliente = 'VIP'` | XX |
+| Receita VIP | `SUM(receita_total) WHERE segmento_cliente = 'VIP'` | R$ XXX.XXX,XX |
+| Ticket Médio Geral | `AVG(ticket_medio)` | R$ XXX,XX |
 
-**Grafico 1 - Distribuicao por Segmento (pizza ou donut):**
-- Valores: COUNT(*) GROUP BY segmento_cliente
-- Labels: VIP, TOP_TIER, REGULAR
-- Titulo: "Distribuicao de Clientes por Segmento"
-- Usar plotly `px.pie`
+**Gráficos:**
 
-**Grafico 2 - Receita por Segmento (barras):**
-- Eixo X: `segmento_cliente`
-- Eixo Y: `SUM(receita_total)` GROUP BY segmento_cliente
-- Titulo: "Receita por Segmento"
-- Usar plotly `px.bar`
+- Clientes por Segmento: barra horizontal com total e percentual.
+- Receita por Segmento: barras com rótulos monetários.
+- Top 10 Clientes por Receita: barras horizontais.
+- Receita por Estado: barras horizontais ordenadas por receita, com contexto de clientes no hover.
 
-**Grafico 3 - Top 10 Clientes por Receita (barras horizontais):**
-- Eixo Y: `nome_cliente` (top 10 por `ranking_receita`)
-- Eixo X: `receita_total`
-- Titulo: "Top 10 Clientes"
-- Usar plotly `px.bar` com `orientation='h'`
+**Tabela detalhada:** deve exibir nomes de colunas legíveis e valores monetários em R$.
 
-**Grafico 4 - Clientes por Estado (barras):**
-- Eixo X: `estado`
-- Eixo Y: COUNT(*) GROUP BY estado
-- Titulo: "Clientes por Estado"
-- Ordenar por quantidade DESC
-- Usar plotly `px.bar`
+## Página 3 - Pricing
 
-**Tabela detalhada:**
-- Mostrar `st.dataframe` com todas as colunas da tabela
-- Filtro por segmento usando `st.selectbox`
-
----
-
-### Pagina 3: Pricing (Diretor de Pricing)
+**Diretor:** Pricing
 
 **Tabela fonte:** `public_gold_pricing.gold_pricing_precos_competitividade`
 
-**KPIs no topo (st.metric):**
+**Contrato do mart:**
 
-| KPI | Calculo | Formato |
-| --- | ------- | ------- |
-| Total Produtos Monitorados | COUNT(*) | XXX |
-| Mais Caros que Todos | COUNT(*) WHERE classificacao = 'MAIS_CARO_QUE_TODOS' | XX |
-| Mais Baratos que Todos | COUNT(*) WHERE classificacao = 'MAIS_BARATO_QUE_TODOS' | XX |
-| Diferenca Media vs Mercado | AVG(diferenca_percentual_vs_media) | +X.X% |
+- `classificacao_preco` aceita `MAIS_CARO_QUE_TODOS`, `ACIMA_DA_MEDIA`, `NA_MEDIA`,
+  `ABAIXO_DA_MEDIA`, `MAIS_BARATO_QUE_TODOS` e `SEM_DADOS`.
+- Registros sem percentual de competitividade não devem entrar em médias percentuais.
 
-Mostrar os 4 KPIs em uma linha usando `st.columns(4)`.
+**Filtros:** Categoria, Marca e Classificação.
 
-**Grafico 1 - Distribuicao por Classificacao (pizza):**
-- Valores: COUNT(*) GROUP BY classificacao_preco
-- Titulo: "Posicionamento de Preco vs Concorrencia"
-- Usar plotly `px.pie`
+**KPIs:**
 
-**Grafico 2 - Diferenca % Media por Categoria (barras):**
-- Eixo X: `categoria`
-- Eixo Y: `AVG(diferenca_percentual_vs_media)` GROUP BY categoria
-- Titulo: "Competitividade por Categoria"
-- Colorir: verde para negativo (mais barato), vermelho para positivo (mais caro)
-- Usar plotly `px.bar`
+| KPI | Cálculo | Formato |
+|---|---|---|
+| Produtos Monitorados | `COUNT(*)` | XXX |
+| Mais Caros que Todos | `COUNT(*) WHERE classificacao_preco = 'MAIS_CARO_QUE_TODOS'` | XX |
+| Mais Baratos que Todos | `COUNT(*) WHERE classificacao_preco = 'MAIS_BARATO_QUE_TODOS'` | XX |
+| Acima da Média | `COUNT(*) WHERE classificacao_preco = 'ACIMA_DA_MEDIA'` | XX |
+| Diferença Média vs Mercado | `AVG(diferenca_percentual_vs_media)` ignorando nulos | +X.X% |
+| Receita Total | `SUM(receita_total)` | R$ XXX.XXX,XX |
+| Receita em Risco | `SUM(receita_total)` para produtos `MAIS_CARO_QUE_TODOS` | R$ XXX.XXX,XX |
+| % Receita em Risco | Receita em Risco / Receita Total | X.X% |
 
-**Grafico 3 - Scatter: Preco vs Volume de Vendas:**
-- Eixo X: `diferenca_percentual_vs_media`
-- Eixo Y: `quantidade_total`
-- Cor: `classificacao_preco`
-- Tamanho: `receita_total`
-- Titulo: "Competitividade x Volume de Vendas"
-- Usar plotly `px.scatter`
+**Gráficos:**
 
-**Tabela de alertas:**
-- Mostrar `st.dataframe` apenas com produtos classificados como `MAIS_CARO_QUE_TODOS`
-- Colunas: produto_id, nome_produto, categoria, nosso_preco, preco_maximo_concorrentes, diferenca_percentual_vs_media
-- Titulo: "Produtos em Alerta (mais caros que todos os concorrentes)"
+- Posicionamento vs Concorrência: barra horizontal por classificação.
+- Competitividade por Categoria: barras com verde para negativo e laranja/vermelho para positivo.
+- Competitividade x Volume por Classificação: bolhas agregadas por classificação.
 
-**Filtro:** Seletor de categoria usando `st.multiselect`.
+**Tabela de alertas:** produtos `MAIS_CARO_QUE_TODOS`, com preços em R$ e percentual formatado.
 
----
+**Narrativa executiva:** resumo textual da seleção filtrada com produtos monitorados,
+diferença média vs mercado, receita em risco, percentual da receita filtrada e categoria
+de maior exposição.
 
-## Requisitos Nao Funcionais
-
-- **Nao usar cache agressivo**: os dados do gold mudam apos cada `dbt run`
-- **Tratar erros de conexao**: mostrar mensagem amigavel se o banco estiver fora
-- **Formatar numeros**: usar formato brasileiro (R$ com ponto de milhar e virgula decimal)
-- **Layout**: usar `st.set_page_config(layout="wide")` para aproveitar a tela
-- **Cores dos graficos**: manter consistencia entre paginas
-
----
-
-## Arquivos a Gerar
-
-| Arquivo | Descricao |
-| ------- | --------- |
-| `case-01-dashboard/app.py` | App Streamlit completo com as 3 paginas |
-| `case-01-dashboard/requirements.txt` | Dependencias Python |
-| `case-01-dashboard/.env.example` | Template das variaveis de ambiente |
-
----
-
-## Como Testar
+## Como testar
 
 ```bash
-# 1. Ativar o ambiente virtual (raiz do projeto)
-.venv\Scripts\activate
-
-# 2. Instalar dependências (apenas na primeira vez)
-pip install -r requirements.txt
-
-# 3. Configurar credenciais (apenas na primeira vez)
-cp .llm\case-01-dashboard\.env.example .llm\case-01-dashboard\.env
-# Editar .llm\case-01-dashboard\.env com a POSTGRES_URL real do Supabase
-
-# 4. Executar o dashboard
-python -m streamlit run .llm\case-01-dashboard\app.py
+uv sync --all-packages
+uv run pytest
+uv run ruff check
+python -m streamlit run .llm/case-01-dashboard/app.py
 ```
 
-O dashboard deve abrir em `http://localhost:8501` com dados reais do banco.
+Se o ambiente não tiver `uv` no PATH, use os executáveis equivalentes da `.venv`.
