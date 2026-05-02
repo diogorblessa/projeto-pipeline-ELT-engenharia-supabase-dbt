@@ -81,6 +81,20 @@ def apply_pricing(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
     return df
 
 
+def selection_from_state(state) -> FilterSelection:
+    return FilterSelection(
+        ano=state.get("ano", FILTER_ALL),
+        mes=state.get("mes", FILTER_ALL),
+        dia_semana=state.get("dia_semana", FILTER_ALL),
+        segmento=state.get("segmento", FILTER_ALL),
+        estado=state.get("estado", FILTER_ALL),
+        top_n=state.get("top_n", 10),
+        categoria=state.get("categoria", FILTER_ALL),
+        marca=state.get("marca", FILTER_ALL),
+        classificacao=state.get("classificacao", FILTER_ALL),
+    )
+
+
 MES_PT: list[str] = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",

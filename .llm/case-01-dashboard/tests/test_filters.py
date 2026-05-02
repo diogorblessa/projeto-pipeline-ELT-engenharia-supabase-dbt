@@ -401,3 +401,49 @@ class TestLoadFilterOptions:
             "classificacoes": [],
             "_error": "conexão recusada",
         }
+
+
+class TestSelectionFromState:
+    def test_uses_defaults_when_state_is_empty(self):
+        from filters import FILTER_ALL, FilterSelection, selection_from_state
+
+        sel = selection_from_state({})
+
+        assert sel == FilterSelection()
+        assert sel.ano == FILTER_ALL
+        assert sel.top_n == 10
+
+    def test_reads_each_key_from_state(self):
+        from filters import selection_from_state
+
+        state = {
+            "ano": "2025",
+            "mes": "Junho",
+            "dia_semana": "Segunda",
+            "segmento": "VIP",
+            "estado": "SP",
+            "top_n": 20,
+            "categoria": "Eletrônicos",
+            "marca": "Marca A",
+            "classificacao": "MAIS_CARO_QUE_TODOS",
+        }
+
+        sel = selection_from_state(state)
+
+        assert sel.ano == "2025"
+        assert sel.mes == "Junho"
+        assert sel.dia_semana == "Segunda"
+        assert sel.segmento == "VIP"
+        assert sel.estado == "SP"
+        assert sel.top_n == 20
+        assert sel.categoria == "Eletrônicos"
+        assert sel.marca == "Marca A"
+        assert sel.classificacao == "MAIS_CARO_QUE_TODOS"
+
+    def test_ignores_unknown_keys_in_state(self):
+        from filters import FilterSelection, selection_from_state
+
+        sel = selection_from_state({"ano": "2025", "ruido": "ignorar"})
+
+        assert sel.ano == "2025"
+        assert sel == FilterSelection(ano="2025")
