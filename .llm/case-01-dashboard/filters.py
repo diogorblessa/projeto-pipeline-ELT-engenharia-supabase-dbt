@@ -8,6 +8,9 @@ reutilizados pelas três views.
 from dataclasses import dataclass
 from typing import Literal
 
+import pandas as pd
+from utils import filter_equals
+
 Page = Literal["Vendas", "Clientes", "Pricing"]
 SectionId = Literal["temporal", "cliente", "produto"]
 
@@ -52,6 +55,15 @@ class FilterSelection:
     categoria: str = FILTER_ALL
     marca: str = FILTER_ALL
     classificacao: str = FILTER_ALL
+
+
+def apply_temporal(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
+    df = filter_equals(df, "ano_venda", sel.ano)
+    if sel.mes != FILTER_ALL:
+        mes_int = MES_PT_TO_INT[sel.mes]
+        df = df[df["mes_venda"] == mes_int]
+    df = filter_equals(df, "dia_semana_nome", sel.dia_semana)
+    return df
 
 
 MES_PT: list[str] = [

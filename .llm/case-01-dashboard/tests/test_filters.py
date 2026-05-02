@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 
@@ -105,3 +106,58 @@ class TestFilterSelection:
         sel = FilterSelection()
         with pytest.raises(dataclasses.FrozenInstanceError):
             sel.ano = "2025"  # type: ignore[misc]
+
+
+class TestApplyTemporal:
+    def _sales_df(self):
+        return pd.DataFrame(
+            {
+                "ano_venda": [2024, 2025, 2025, 2026],
+                "mes_venda": [12, 1, 6, 6],
+                "dia_semana_nome": ["Segunda", "Quarta", "Segunda", "Sexta"],
+                "receita_total": [100.0, 200.0, 300.0, 400.0],
+            }
+        )
+
+    def test_default_selection_returns_dataframe_unchanged(self):
+        from filters import FilterSelection, apply_temporal
+
+        df = self._sales_df()
+        result = apply_temporal(df, FilterSelection())
+
+        assert result is df
+
+    def test_filters_year(self):
+        from filters import FilterSelection, apply_temporal
+
+        df = self._sales_df()
+        result = apply_temporal(df, FilterSelection(ano="2025"))
+
+        assert result["ano_venda"].tolist() == [2025, 2025]
+
+    def test_filters_month_using_pt_name(self):
+        from filters import FilterSelection, apply_temporal
+
+        df = self._sales_df()
+        result = apply_temporal(df, FilterSelection(mes="Junho"))
+
+        assert result["mes_venda"].tolist() == [6, 6]
+
+    def test_filters_day_of_week(self):
+        from filters import FilterSelection, apply_temporal
+
+        df = self._sales_df()
+        result = apply_temporal(df, FilterSelection(dia_semana="Segunda"))
+
+        assert result["dia_semana_nome"].tolist() == ["Segunda", "Segunda"]
+
+    def test_combines_year_month_and_day_of_week(self):
+        from filters import FilterSelection, apply_temporal
+
+        df = self._sales_df()
+        result = apply_temporal(
+            df,
+            FilterSelection(ano="2025", mes="Junho", dia_semana="Segunda"),
+        )
+
+        assert result["receita_total"].tolist() == [300.0]
