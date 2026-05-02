@@ -66,6 +66,12 @@ def apply_temporal(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
     return df
 
 
+def apply_customer(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
+    df = filter_equals(df, "segmento_cliente", sel.segmento)
+    df = filter_equals(df, "estado", sel.estado)
+    return df
+
+
 MES_PT: list[str] = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",

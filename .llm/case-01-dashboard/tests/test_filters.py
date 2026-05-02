@@ -161,3 +161,46 @@ class TestApplyTemporal:
         )
 
         assert result["receita_total"].tolist() == [300.0]
+
+
+class TestApplyCustomer:
+    def _customers_df(self):
+        return pd.DataFrame(
+            {
+                "cliente_id": [1, 2, 3, 4],
+                "segmento_cliente": ["VIP", "REGULAR", "VIP", "TOP_TIER"],
+                "estado": ["SP", "RJ", "RJ", "SP"],
+            }
+        )
+
+    def test_default_selection_returns_dataframe_unchanged(self):
+        from filters import FilterSelection, apply_customer
+
+        df = self._customers_df()
+        result = apply_customer(df, FilterSelection())
+
+        assert result is df
+
+    def test_filters_segment(self):
+        from filters import FilterSelection, apply_customer
+
+        df = self._customers_df()
+        result = apply_customer(df, FilterSelection(segmento="VIP"))
+
+        assert result["cliente_id"].tolist() == [1, 3]
+
+    def test_filters_state(self):
+        from filters import FilterSelection, apply_customer
+
+        df = self._customers_df()
+        result = apply_customer(df, FilterSelection(estado="SP"))
+
+        assert result["cliente_id"].tolist() == [1, 4]
+
+    def test_combines_segment_and_state(self):
+        from filters import FilterSelection, apply_customer
+
+        df = self._customers_df()
+        result = apply_customer(df, FilterSelection(segmento="VIP", estado="RJ"))
+
+        assert result["cliente_id"].tolist() == [3]
