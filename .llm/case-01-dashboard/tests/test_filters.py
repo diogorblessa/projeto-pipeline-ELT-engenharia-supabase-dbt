@@ -204,3 +204,67 @@ class TestApplyCustomer:
         result = apply_customer(df, FilterSelection(segmento="VIP", estado="RJ"))
 
         assert result["cliente_id"].tolist() == [3]
+
+
+class TestApplyPricing:
+    def _pricing_df(self):
+        return pd.DataFrame(
+            {
+                "produto_id": [1, 2, 3, 4],
+                "categoria": ["Eletrônicos", "Eletrônicos", "Casa", "Casa"],
+                "marca": ["Marca A", "Marca B", "Marca A", "Marca B"],
+                "classificacao_preco": [
+                    "MAIS_CARO_QUE_TODOS",
+                    "ACIMA_DA_MEDIA",
+                    "MAIS_BARATO_QUE_TODOS",
+                    "MAIS_CARO_QUE_TODOS",
+                ],
+            }
+        )
+
+    def test_default_selection_returns_dataframe_unchanged(self):
+        from filters import FilterSelection, apply_pricing
+
+        df = self._pricing_df()
+        result = apply_pricing(df, FilterSelection())
+
+        assert result is df
+
+    def test_filters_category(self):
+        from filters import FilterSelection, apply_pricing
+
+        df = self._pricing_df()
+        result = apply_pricing(df, FilterSelection(categoria="Casa"))
+
+        assert result["produto_id"].tolist() == [3, 4]
+
+    def test_filters_brand(self):
+        from filters import FilterSelection, apply_pricing
+
+        df = self._pricing_df()
+        result = apply_pricing(df, FilterSelection(marca="Marca A"))
+
+        assert result["produto_id"].tolist() == [1, 3]
+
+    def test_filters_classification(self):
+        from filters import FilterSelection, apply_pricing
+
+        df = self._pricing_df()
+        result = apply_pricing(df, FilterSelection(classificacao="MAIS_CARO_QUE_TODOS"))
+
+        assert result["produto_id"].tolist() == [1, 4]
+
+    def test_combines_three_axes(self):
+        from filters import FilterSelection, apply_pricing
+
+        df = self._pricing_df()
+        result = apply_pricing(
+            df,
+            FilterSelection(
+                categoria="Eletrônicos",
+                marca="Marca A",
+                classificacao="MAIS_CARO_QUE_TODOS",
+            ),
+        )
+
+        assert result["produto_id"].tolist() == [1]

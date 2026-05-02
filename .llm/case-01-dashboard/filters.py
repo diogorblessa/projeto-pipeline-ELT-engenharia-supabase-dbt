@@ -72,6 +72,13 @@ def apply_customer(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
     return df
 
 
+def apply_pricing(df: pd.DataFrame, sel: FilterSelection) -> pd.DataFrame:
+    df = filter_equals(df, "categoria", sel.categoria)
+    df = filter_equals(df, "marca", sel.marca)
+    df = filter_equals(df, "classificacao_preco", sel.classificacao)
+    return df
+
+
 MES_PT: list[str] = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
