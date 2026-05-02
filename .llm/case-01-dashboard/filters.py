@@ -5,6 +5,7 @@ carregamento cacheado de opções via SELECT DISTINCT e helpers apply_*
 reutilizados pelas três views.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -168,3 +169,94 @@ def _load_filter_options_uncached() -> dict:
 @st.cache_data(ttl=300, show_spinner=False)
 def load_filter_options() -> dict:
     return _load_filter_options_uncached()
+
+
+def _options_for(filter_key: str, options: dict) -> tuple[list, Callable | None]:
+    """Devolve (lista_de_opcoes_com_todos, format_func) para um filtro do registry."""
+    if filter_key == "ano":
+        anos = options["anos"]
+        return [FILTER_ALL, *[str(ano) for ano in anos]], None
+    if filter_key == "mes":
+        meses_int = options["meses"]
+        return [FILTER_ALL, *[MES_PT[m - 1] for m in meses_int if 1 <= m <= 12]], None
+    if filter_key == "dia_semana":
+        return [FILTER_ALL, *options["dias_semana"]], None
+    if filter_key == "segmento":
+        return (
+            [FILTER_ALL, *options["segmentos"]],
+            lambda v: segment_label(v) if v != FILTER_ALL else FILTER_ALL,
+        )
+    if filter_key == "estado":
+        return [FILTER_ALL, *options["estados"]], None
+    if filter_key == "top_n":
+        return options["top_n"], None
+    if filter_key == "categoria":
+        return [FILTER_ALL, *options["categorias"]], None
+    if filter_key == "marca":
+        return [FILTER_ALL, *options["marcas"]], None
+    if filter_key == "classificacao":
+        return (
+            [FILTER_ALL, *options["classificacoes"]],
+            lambda v: classification_label(v) if v != FILTER_ALL else FILTER_ALL,
+        )
+    return [FILTER_ALL], None
+
+
+def render_sidebar(page: Page) -> FilterSelection:
+    options = load_filter_options()
+    error = options.get("_error")
+
+    with st.sidebar:
+        st.markdown(
+            """
+            <div class="sidebar-brand">
+                <div class="sidebar-eyebrow">E-commerce Analytics</div>
+                <h1 class="sidebar-title">Relatório Analítico</h1>
+                <p class="sidebar-description">
+                    Visão estratégica de vendas, clientes e pricing.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.divider()
+
+        if error:
+            st.warning(
+                "Não foi possível carregar opções de filtros. "
+                "Páginas operam sem filtragem."
+            )
+
+        last_section = None
+        for fdef in FILTER_REGISTRY:
+            if fdef.section != last_section:
+                section_html = (
+                    f'<div class="sidebar-section-title">'
+                    f'{SECTION_TITLES[fdef.section].upper()}</div>'
+                )
+                st.markdown(section_html, unsafe_allow_html=True)
+                last_section = fdef.section
+
+            applies = is_filter_applicable(fdef.key, page)
+            choices, format_func = _options_for(fdef.key, options)
+            help_text = (
+                None
+                if applies
+                else f"Disponível em {', '.join(fdef.pages)}."
+            )
+            kwargs = {
+                "options": choices,
+                "key": fdef.key,
+                "disabled": not applies,
+                "help": help_text,
+            }
+            if format_func is not None:
+                kwargs["format_func"] = format_func
+            st.selectbox(fdef.label, **kwargs)
+
+        st.divider()
+        if st.button("Recarregar opções", help="Limpa o cache e busca novas opções no banco."):
+            load_filter_options.clear()
+            st.rerun()
+
+    return selection_from_state(st.session_state)

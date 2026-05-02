@@ -478,3 +478,190 @@ class TestIsFilterApplicable:
         from filters import is_filter_applicable
 
         assert is_filter_applicable("desconhecido", "Vendas") is False
+
+
+class _SidebarStub:
+    def __init__(self):
+        self.markdowns: list[str] = []
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def markdown(self, *args, **kwargs):
+        if args:
+            self.markdowns.append(str(args[0]))
+
+    def warning(self, message):
+        self.warnings.append(message)
+
+    def error(self, message):
+        self.errors.append(message)
+
+
+class _StreamlitStub:
+    def __init__(self, state=None):
+        self.sidebar = _SidebarStub()
+        self.session_state = state if state is not None else {}
+        self.selectbox_calls: list[dict] = []
+        self.button_calls: list[dict] = []
+        self.warnings: list[str] = []
+        self.errors: list[str] = []
+
+    def selectbox(self, label, options, **kwargs):
+        self.selectbox_calls.append({"label": label, "options": options, **kwargs})
+        key = kwargs.get("key")
+        if key in self.session_state:
+            return self.session_state[key]
+        return options[0]
+
+    def button(self, label, **kwargs):
+        self.button_calls.append({"label": label, **kwargs})
+        return False
+
+    def divider(self):
+        return None
+
+    def warning(self, message):
+        self.warnings.append(message)
+
+    def error(self, message):
+        self.errors.append(message)
+
+    def markdown(self, *args, **kwargs):
+        return None
+
+    def rerun(self):
+        return None
+
+
+class TestRenderSidebar:
+    def _options(self):
+        return {
+            "anos": [2024, 2025],
+            "meses": [1, 6, 12],
+            "dias_semana": ["Segunda", "Quarta", "Sábado"],
+            "segmentos": ["REGULAR", "VIP"],
+            "estados": ["RJ", "SP"],
+            "top_n": [5, 10, 15, 20, 50],
+            "categorias": ["Casa", "Eletrônicos"],
+            "marcas": ["Marca A", "Marca B"],
+            "classificacoes": ["MAIS_CARO_QUE_TODOS"],
+        }
+
+    def test_returns_filter_selection_with_defaults_when_state_empty(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        selection = filters.render_sidebar("Vendas")
+
+        assert isinstance(selection, filters.FilterSelection)
+        assert selection.ano == filters.FILTER_ALL
+        assert selection.top_n == 10
+
+    def test_renders_nine_selectboxes_for_any_page(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        filters.render_sidebar("Pricing")
+
+        labels = [call["label"] for call in st_stub.selectbox_calls]
+        assert labels == [
+            "Ano", "Mês", "Dia da Semana",
+            "Segmento", "Estado", "Top N Clientes",
+            "Categoria", "Marca", "Classificação",
+        ]
+
+    def test_disables_filters_outside_active_page(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        filters.render_sidebar("Vendas")
+
+        disabled_by_label = {
+            call["label"]: call.get("disabled", False) for call in st_stub.selectbox_calls
+        }
+        assert disabled_by_label["Ano"] is False
+        assert disabled_by_label["Mês"] is False
+        assert disabled_by_label["Dia da Semana"] is False
+        assert disabled_by_label["Segmento"] is True
+        assert disabled_by_label["Estado"] is True
+        assert disabled_by_label["Top N Clientes"] is True
+        assert disabled_by_label["Categoria"] is True
+        assert disabled_by_label["Marca"] is True
+        assert disabled_by_label["Classificação"] is True
+
+    def test_passes_help_text_to_disabled_filters(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        filters.render_sidebar("Vendas")
+
+        help_by_label = {
+            call["label"]: call.get("help") for call in st_stub.selectbox_calls
+        }
+        assert help_by_label["Ano"] is None
+        assert help_by_label["Segmento"] == "Disponível em Clientes."
+        assert help_by_label["Categoria"] == "Disponível em Pricing."
+
+    def test_uses_consistent_session_state_keys_across_pages(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        filters.render_sidebar("Vendas")
+
+        keys = [call.get("key") for call in st_stub.selectbox_calls]
+        assert keys == [
+            "ano", "mes", "dia_semana",
+            "segmento", "estado", "top_n",
+            "categoria", "marca", "classificacao",
+        ]
+
+    def test_warns_when_options_failed_to_load(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(
+            filters,
+            "load_filter_options",
+            lambda: {**self._options(), "_error": "conexão recusada"},
+        )
+
+        filters.render_sidebar("Vendas")
+
+        assert any(
+            "Não foi possível carregar opções de filtros" in msg
+            for msg in st_stub.warnings
+        )
+
+    def test_includes_reload_button(self, monkeypatch):
+        import filters
+
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: self._options())
+
+        filters.render_sidebar("Vendas")
+
+        button_labels = [call["label"] for call in st_stub.button_calls]
+        assert "Recarregar opções" in button_labels
