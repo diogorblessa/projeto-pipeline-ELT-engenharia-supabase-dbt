@@ -326,3 +326,78 @@ class TestOptionsQueriesSecurity:
         assert "categoria" in PRICING_OPTIONS_QUERY
         assert "marca" in PRICING_OPTIONS_QUERY
         assert "classificacao_preco" in PRICING_OPTIONS_QUERY
+
+
+class TestLoadFilterOptions:
+    def test_returns_normalized_dict_with_all_expected_keys(self, monkeypatch):
+        import filters
+        sales_df = pd.DataFrame(
+            {
+                "ano_venda": [2026, 2024, 2025, 2025],
+                "mes_venda": [12, 1, 6, 6],
+                "dia_semana_nome": ["Segunda", "Sábado", "Quarta", "Sábado"],
+            }
+        )
+        customers_df = pd.DataFrame(
+            {
+                "segmento_cliente": ["VIP", "REGULAR", "TOP_TIER", "VIP"],
+                "estado": ["SP", "RJ", "MG", "RJ"],
+            }
+        )
+        pricing_df = pd.DataFrame(
+            {
+                "categoria": ["Casa", "Eletrônicos", "Casa"],
+                "marca": ["Marca B", "Marca A", "Marca A"],
+                "classificacao_preco": [
+                    "ACIMA_DA_MEDIA",
+                    "MAIS_CARO_QUE_TODOS",
+                    "ABAIXO_DA_MEDIA",
+                ],
+            }
+        )
+
+        results_by_query = {
+            filters.SALES_OPTIONS_QUERY: sales_df,
+            filters.CUSTOMERS_OPTIONS_QUERY: customers_df,
+            filters.PRICING_OPTIONS_QUERY: pricing_df,
+        }
+        monkeypatch.setattr(filters, "get_data", lambda query: results_by_query[query])
+
+        options = filters._load_filter_options_uncached()
+
+        assert options["anos"] == [2024, 2025, 2026]
+        assert options["meses"] == [1, 6, 12]
+        assert options["dias_semana"] == ["Segunda", "Quarta", "Sábado"]
+        assert options["segmentos"] == ["REGULAR", "TOP_TIER", "VIP"]
+        assert options["estados"] == ["MG", "RJ", "SP"]
+        assert options["top_n"] == [5, 10, 15, 20, 50]
+        assert options["categorias"] == ["Casa", "Eletrônicos"]
+        assert options["marcas"] == ["Marca A", "Marca B"]
+        assert options["classificacoes"] == [
+            "ABAIXO_DA_MEDIA",
+            "ACIMA_DA_MEDIA",
+            "MAIS_CARO_QUE_TODOS",
+        ]
+
+    def test_returns_safe_empty_options_on_database_error(self, monkeypatch):
+        import filters
+
+        def boom(query):
+            raise RuntimeError("conexão recusada")
+
+        monkeypatch.setattr(filters, "get_data", boom)
+
+        options = filters._load_filter_options_uncached()
+
+        assert options == {
+            "anos": [],
+            "meses": [],
+            "dias_semana": [],
+            "segmentos": [],
+            "estados": [],
+            "top_n": [5, 10, 15, 20, 50],
+            "categorias": [],
+            "marcas": [],
+            "classificacoes": [],
+            "_error": "conexão recusada",
+        }

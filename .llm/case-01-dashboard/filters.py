@@ -9,7 +9,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 import pandas as pd
-from utils import filter_equals
+import streamlit as st
+from db import get_data
+from utils import DAY_ORDER, classification_label, filter_equals, segment_label
 
 Page = Literal["Vendas", "Clientes", "Pricing"]
 SectionId = Literal["temporal", "cliente", "produto"]
@@ -101,3 +103,49 @@ PRICING_OPTIONS_QUERY = """
 SELECT DISTINCT categoria, marca, classificacao_preco
 FROM public_gold_pricing.gold_pricing_precos_competitividade
 """.strip()
+
+TOP_N_OPTIONS: list[int] = [5, 10, 15, 20, 50]
+
+
+def _load_filter_options_uncached() -> dict:
+    empty: dict = {
+        "anos": [],
+        "meses": [],
+        "dias_semana": [],
+        "segmentos": [],
+        "estados": [],
+        "top_n": TOP_N_OPTIONS,
+        "categorias": [],
+        "marcas": [],
+        "classificacoes": [],
+    }
+    try:
+        sales = get_data(SALES_OPTIONS_QUERY)
+        customers = get_data(CUSTOMERS_OPTIONS_QUERY)
+        pricing = get_data(PRICING_OPTIONS_QUERY)
+    except Exception as exc:
+        return {**empty, "_error": str(exc)}
+
+    dias_unicos = set(sales["dia_semana_nome"].dropna())
+    return {
+        "anos": sorted(sales["ano_venda"].dropna().astype(int).unique().tolist()),
+        "meses": sorted(sales["mes_venda"].dropna().astype(int).unique().tolist()),
+        "dias_semana": [d for d in DAY_ORDER if d in dias_unicos],
+        "segmentos": sorted(
+            customers["segmento_cliente"].dropna().unique().tolist(),
+            key=segment_label,
+        ),
+        "estados": sorted(customers["estado"].dropna().unique().tolist()),
+        "top_n": TOP_N_OPTIONS,
+        "categorias": sorted(pricing["categoria"].dropna().unique().tolist()),
+        "marcas": sorted(pricing["marca"].dropna().unique().tolist()),
+        "classificacoes": sorted(
+            pricing["classificacao_preco"].dropna().unique().tolist(),
+            key=classification_label,
+        ),
+    }
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_filter_options() -> dict:
+    return _load_filter_options_uncached()
