@@ -1,13 +1,6 @@
 import pandas as pd
+from filters import FilterSelection
 from views import vendas
-
-
-class _Sidebar:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        return False
 
 
 class _Column:
@@ -20,12 +13,8 @@ class _Column:
 
 class _StreamlitStub:
     def __init__(self):
-        self.sidebar = _Sidebar()
         self.errors: list[str] = []
         self.warnings: list[str] = []
-
-    def selectbox(self, label, options, key=None):
-        return options[0]
 
     def markdown(self, *args, **kwargs):
         return None
@@ -66,7 +55,7 @@ def test_render_reports_transformation_errors_instead_of_crashing(monkeypatch):
     monkeypatch.setattr(vendas, "st", st_stub)
     monkeypatch.setattr(vendas, "get_data", lambda query: _sales_dataframe())
 
-    vendas.render()
+    vendas.render(FilterSelection())
 
     assert st_stub.errors == ["Não foi possível renderizar a página de vendas."]
     assert st_stub.warnings == []
