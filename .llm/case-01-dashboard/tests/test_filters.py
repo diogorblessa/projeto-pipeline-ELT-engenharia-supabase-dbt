@@ -268,3 +268,61 @@ class TestApplyPricing:
         )
 
         assert result["produto_id"].tolist() == [1]
+
+
+class TestOptionsQueriesSecurity:
+    def test_queries_use_distinct_and_target_expected_marts(self):
+        from filters import (
+            CUSTOMERS_OPTIONS_QUERY,
+            PRICING_OPTIONS_QUERY,
+            SALES_OPTIONS_QUERY,
+        )
+
+        for query in (SALES_OPTIONS_QUERY, CUSTOMERS_OPTIONS_QUERY, PRICING_OPTIONS_QUERY):
+            assert "SELECT DISTINCT" in query.upper()
+
+        assert "public_gold_sales.gold_sales_vendas_temporais" in SALES_OPTIONS_QUERY
+        assert (
+            "public_gold_cs.gold_customer_success_clientes_segmentacao"
+            in CUSTOMERS_OPTIONS_QUERY
+        )
+        assert (
+            "public_gold_pricing.gold_pricing_precos_competitividade"
+            in PRICING_OPTIONS_QUERY
+        )
+
+    def test_queries_do_not_reference_pii_or_identifier_columns(self):
+        from filters import (
+            CUSTOMERS_OPTIONS_QUERY,
+            PRICING_OPTIONS_QUERY,
+            SALES_OPTIONS_QUERY,
+        )
+
+        forbidden = (
+            "nome_cliente",
+            "cliente_id",
+            "produto_id",
+            "nome_produto",
+            "nosso_preco",
+        )
+        for query in (SALES_OPTIONS_QUERY, CUSTOMERS_OPTIONS_QUERY, PRICING_OPTIONS_QUERY):
+            for column in forbidden:
+                assert column not in query, f"query proibida contém {column!r}"
+
+    def test_queries_select_only_categorical_dimensions(self):
+        from filters import (
+            CUSTOMERS_OPTIONS_QUERY,
+            PRICING_OPTIONS_QUERY,
+            SALES_OPTIONS_QUERY,
+        )
+
+        assert "ano_venda" in SALES_OPTIONS_QUERY
+        assert "mes_venda" in SALES_OPTIONS_QUERY
+        assert "dia_semana_nome" in SALES_OPTIONS_QUERY
+
+        assert "segmento_cliente" in CUSTOMERS_OPTIONS_QUERY
+        assert "estado" in CUSTOMERS_OPTIONS_QUERY
+
+        assert "categoria" in PRICING_OPTIONS_QUERY
+        assert "marca" in PRICING_OPTIONS_QUERY
+        assert "classificacao_preco" in PRICING_OPTIONS_QUERY

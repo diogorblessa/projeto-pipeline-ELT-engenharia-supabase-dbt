@@ -85,3 +85,19 @@ MES_PT: list[str] = [
 ]
 
 MES_PT_TO_INT: dict[str, int] = {nome: i + 1 for i, nome in enumerate(MES_PT)}
+
+SALES_OPTIONS_QUERY = """
+SELECT DISTINCT ano_venda, mes_venda, dia_semana_nome
+FROM public_gold_sales.gold_sales_vendas_temporais
+WHERE ano_venda IS NOT NULL
+""".strip()
+
+CUSTOMERS_OPTIONS_QUERY = """
+SELECT DISTINCT segmento_cliente, estado
+FROM public_gold_cs.gold_customer_success_clientes_segmentacao
+""".strip()
+
+PRICING_OPTIONS_QUERY = """
+SELECT DISTINCT categoria, marca, classificacao_preco
+FROM public_gold_pricing.gold_pricing_precos_competitividade
+""".strip()
