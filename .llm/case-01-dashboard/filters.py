@@ -95,6 +95,11 @@ def selection_from_state(state) -> FilterSelection:
     )
 
 
+def is_filter_applicable(filter_key: str, page: Page) -> bool:
+    fdef = next((f for f in FILTER_REGISTRY if f.key == filter_key), None)
+    return fdef is not None and page in fdef.pages
+
+
 MES_PT: list[str] = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",

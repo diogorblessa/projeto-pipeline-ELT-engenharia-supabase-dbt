@@ -447,3 +447,34 @@ class TestSelectionFromState:
 
         assert sel.ano == "2025"
         assert sel == FilterSelection(ano="2025")
+
+
+class TestIsFilterApplicable:
+    def test_temporal_filters_apply_only_to_vendas(self):
+        from filters import is_filter_applicable
+
+        for key in ("ano", "mes", "dia_semana"):
+            assert is_filter_applicable(key, "Vendas") is True
+            assert is_filter_applicable(key, "Clientes") is False
+            assert is_filter_applicable(key, "Pricing") is False
+
+    def test_cliente_filters_apply_only_to_clientes(self):
+        from filters import is_filter_applicable
+
+        for key in ("segmento", "estado", "top_n"):
+            assert is_filter_applicable(key, "Clientes") is True
+            assert is_filter_applicable(key, "Vendas") is False
+            assert is_filter_applicable(key, "Pricing") is False
+
+    def test_produto_filters_apply_only_to_pricing(self):
+        from filters import is_filter_applicable
+
+        for key in ("categoria", "marca", "classificacao"):
+            assert is_filter_applicable(key, "Pricing") is True
+            assert is_filter_applicable(key, "Vendas") is False
+            assert is_filter_applicable(key, "Clientes") is False
+
+    def test_unknown_filter_is_not_applicable(self):
+        from filters import is_filter_applicable
+
+        assert is_filter_applicable("desconhecido", "Vendas") is False
