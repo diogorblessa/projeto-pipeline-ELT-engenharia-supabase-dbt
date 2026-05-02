@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestMesPt:
     def test_mes_pt_has_twelve_names_in_calendar_order(self):
         from filters import MES_PT
@@ -74,7 +77,6 @@ class TestFilterRegistry:
 
 class TestFilterSelection:
     def test_default_selection_uses_filter_all_for_strings_and_ten_for_top_n(self):
-        import pytest
         from filters import FILTER_ALL, FilterSelection
 
         sel = FilterSelection()
@@ -97,7 +99,7 @@ class TestFilterSelection:
 
     def test_selection_is_frozen(self):
         import dataclasses
-        import pytest
+
         from filters import FilterSelection
 
         sel = FilterSelection()
