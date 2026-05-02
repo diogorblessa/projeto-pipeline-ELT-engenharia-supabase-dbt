@@ -70,3 +70,36 @@ class TestFilterRegistry:
             "cliente": "Cliente",
             "produto": "Produto",
         }
+
+
+class TestFilterSelection:
+    def test_default_selection_uses_filter_all_for_strings_and_ten_for_top_n(self):
+        import pytest
+        from filters import FILTER_ALL, FilterSelection
+
+        sel = FilterSelection()
+
+        assert sel.ano == FILTER_ALL
+        assert sel.mes == FILTER_ALL
+        assert sel.dia_semana == FILTER_ALL
+        assert sel.segmento == FILTER_ALL
+        assert sel.estado == FILTER_ALL
+        assert sel.top_n == 10
+        assert sel.categoria == FILTER_ALL
+        assert sel.marca == FILTER_ALL
+        assert sel.classificacao == FILTER_ALL
+
+    def test_filter_all_label_matches_utils(self):
+        import filters
+        import utils
+
+        assert filters.FILTER_ALL == utils.FILTER_ALL == "Todos"
+
+    def test_selection_is_frozen(self):
+        import dataclasses
+        import pytest
+        from filters import FilterSelection
+
+        sel = FilterSelection()
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            sel.ano = "2025"  # type: ignore[misc]

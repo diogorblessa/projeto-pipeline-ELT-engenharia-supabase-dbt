@@ -38,6 +38,22 @@ SECTION_TITLES: dict[SectionId, str] = {
     "produto": "Produto",
 }
 
+FILTER_ALL = "Todos"
+
+
+@dataclass(frozen=True)
+class FilterSelection:
+    ano: str = FILTER_ALL
+    mes: str = FILTER_ALL
+    dia_semana: str = FILTER_ALL
+    segmento: str = FILTER_ALL
+    estado: str = FILTER_ALL
+    top_n: int = 10
+    categoria: str = FILTER_ALL
+    marca: str = FILTER_ALL
+    classificacao: str = FILTER_ALL
+
+
 MES_PT: list[str] = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
