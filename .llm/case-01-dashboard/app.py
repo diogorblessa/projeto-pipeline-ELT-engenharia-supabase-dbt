@@ -2,6 +2,7 @@ from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
+from filters import render_sidebar
 
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
@@ -25,6 +26,14 @@ def inject_css():
         .stApp {
             background-color: #F8FAFC;
         }
+        [data-testid="stHeader"] {
+            background: transparent;
+            height: 0;
+        }
+        [data-testid="stToolbar"] {
+            right: 1rem;
+            top: 0.5rem;
+        }
         [data-testid="stSidebar"] {
             background-color: #FFFFFF !important;
             border-right: 1px solid #E2E8F0;
@@ -36,6 +45,12 @@ def inject_css():
             color: #334155 !important;
             font-size: 13px !important;
             font-weight: 700 !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"][aria-disabled="true"] {
+            opacity: 0.55;
+        }
+        [data-testid="stSidebar"] label:has(+ div [aria-disabled="true"]) {
+            color: #94A3B8 !important;
         }
         .sidebar-brand {
             padding: 0.25rem 0 0.75rem;
@@ -119,30 +134,8 @@ def inject_css():
     )
 
 
-def render_sidebar_shell() -> None:
-    with st.sidebar:
-        st.markdown(
-            """
-            <div class="sidebar-brand">
-                <div class="sidebar-eyebrow">E-commerce Analytics</div>
-                <h1 class="sidebar-title">Relatório Analítico</h1>
-                <p class="sidebar-description">
-                    Visão estratégica de vendas, clientes e pricing.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.divider()
-        st.markdown(
-            '<div class="sidebar-section-title">Filtros</div>',
-            unsafe_allow_html=True,
-        )
-
-
 def main():
     inject_css()
-    render_sidebar_shell()
 
     page = st.radio(
         "Página",
@@ -153,18 +146,20 @@ def main():
     )
     st.divider()
 
+    selection = render_sidebar(page)
+
     if page == "Vendas":
         from views.vendas import render
 
-        render()
+        render(selection)
     elif page == "Clientes":
         from views.clientes import render
 
-        render()
+        render(selection)
     else:
         from views.pricing import render
 
-        render()
+        render(selection)
 
 
 main()
