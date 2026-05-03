@@ -278,48 +278,6 @@ class TestClientesHelpers:
 
 
 class TestPricingHelpers:
-    def test_apply_pricing_filters_uses_category_brand_and_raw_classification(self):
-        df = pd.DataFrame(
-            {
-                "produto_id": [1, 2, 3],
-                "categoria": ["Eletrônicos", "Eletrônicos", "Casa"],
-                "marca": ["Marca A", "Marca B", "Marca A"],
-                "classificacao_preco": [
-                    "MAIS_CARO_QUE_TODOS",
-                    "ACIMA_DA_MEDIA",
-                    "MAIS_CARO_QUE_TODOS",
-                ],
-            }
-        )
-
-        result = pricing._apply_pricing_filters(
-            df,
-            categories=["Eletrônicos"],
-            brands=["Marca A"],
-            classifications=["MAIS_CARO_QUE_TODOS"],
-        )
-
-        assert result["produto_id"].tolist() == [1]
-
-    def test_apply_pricing_filters_returns_empty_for_empty_selection(self):
-        df = pd.DataFrame(
-            {
-                "produto_id": [1],
-                "categoria": ["Eletrônicos"],
-                "marca": ["Marca A"],
-                "classificacao_preco": ["MAIS_CARO_QUE_TODOS"],
-            }
-        )
-
-        result = pricing._apply_pricing_filters(
-            df,
-            categories=[],
-            brands=["Marca A"],
-            classifications=["MAIS_CARO_QUE_TODOS"],
-        )
-
-        assert result.empty
-
     def test_pricing_metrics_calculates_revenue_risk_and_exposure_category(self):
         df = pd.DataFrame(
             {

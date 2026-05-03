@@ -2,13 +2,12 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from db import get_data
+from filters import FilterSelection, apply_pricing
 from utils import (
     CLASS_COLORS,
     MissingColumnsError,
     apply_chart_style,
-    build_filter_options,
     classification_label,
-    filter_in,
     fmt_brl,
     fmt_brl_compact,
     fmt_int,
@@ -20,26 +19,6 @@ from utils import (
 THEME_COLOR = "#E69F00"
 QUERY = "SELECT * FROM public_gold_pricing.gold_pricing_precos_competitividade"
 RISK_CLASS = "MAIS_CARO_QUE_TODOS"
-
-
-def _multiselect_options(values: pd.Series) -> list[str]:
-    return build_filter_options(values)[1:]
-
-
-def _classification_filter_options(df: pd.DataFrame) -> list[str]:
-    classifications = df["classificacao_preco"].dropna().unique().tolist()
-    return sorted(classifications, key=classification_label)
-
-
-def _apply_pricing_filters(
-    df: pd.DataFrame,
-    categories: list[str],
-    brands: list[str],
-    classifications: list[str],
-) -> pd.DataFrame:
-    result = filter_in(df, "categoria", categories)
-    result = filter_in(result, "marca", brands)
-    return filter_in(result, "classificacao_preco", classifications)
 
 
 def _pricing_metrics(df: pd.DataFrame) -> dict[str, float | int | str]:
@@ -111,7 +90,7 @@ def _format_alert_table(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def render() -> None:
+def render(selection: FilterSelection) -> None:
     try:
         df = get_data(QUERY)
         validate_pricing_columns(df)
@@ -123,40 +102,14 @@ def render() -> None:
         return
 
     try:
-        _render_pricing_page(df)
+        _render_pricing_page(df, selection)
     except Exception:
         st.error("Não foi possível renderizar a página de pricing.")
         return
 
 
-def _render_pricing_page(df: pd.DataFrame) -> None:
-    category_options = _multiselect_options(df["categoria"])
-    brand_options = _multiselect_options(df["marca"])
-    classification_options = _classification_filter_options(df)
-
-    with st.sidebar:
-        st.markdown("#### Filtros - Pricing")
-        categories = st.multiselect(
-            "Categoria",
-            category_options,
-            default=category_options,
-            key="pricing_categorias",
-        )
-        brands = st.multiselect(
-            "Marca",
-            brand_options,
-            default=brand_options,
-            key="pricing_marcas",
-        )
-        classifications = st.multiselect(
-            "Classificação",
-            classification_options,
-            default=classification_options,
-            format_func=classification_label,
-            key="pricing_classificacoes",
-        )
-
-    df_f = _apply_pricing_filters(df, categories, brands, classifications)
+def _render_pricing_page(df: pd.DataFrame, selection: FilterSelection) -> None:
+    df_f = apply_pricing(df, selection)
 
     st.markdown(
         f"<h1 style='color:#0F172A;font-size:28px;font-weight:700;"
