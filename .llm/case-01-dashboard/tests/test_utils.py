@@ -28,10 +28,7 @@ class TestColumnContracts:
 
     def test_table_names_match_dashboard_marts(self):
         assert utils.SALES_TABLE == "public_gold_sales.gold_sales_vendas_temporais"
-        assert (
-            utils.CUSTOMERS_TABLE
-            == "public_gold_cs.gold_customer_success_clientes_segmentacao"
-        )
+        assert utils.CUSTOMERS_TABLE == "public_gold_cs.gold_customer_success_clientes_segmentacao"
         assert utils.PRICING_TABLE == "public_gold_pricing.gold_pricing_precos_competitividade"
 
     def test_sales_required_columns_match_sales_mart_without_weekday_aliases(self):
@@ -48,9 +45,7 @@ class TestColumnContracts:
             "ticket_medio",
         )
         assert {"dia_da_semana", "dia_semana_nome"} == utils.SALES_WEEKDAY_ALIASES
-        assert not set(utils.SALES_REQUIRED_COLUMNS).intersection(
-            utils.SALES_WEEKDAY_ALIASES
-        )
+        assert not set(utils.SALES_REQUIRED_COLUMNS).intersection(utils.SALES_WEEKDAY_ALIASES)
 
     def test_customers_required_columns_match_customer_mart(self):
         assert utils.CUSTOMERS_REQUIRED_COLUMNS == (
@@ -263,32 +258,6 @@ class TestFilterHelpers:
 
 
 class TestClientesHelpers:
-    def test_segment_filter_options_keep_raw_values_with_readable_labels(self):
-        df = pd.DataFrame({"segmento_cliente": ["TOP_TIER", "VIP", "REGULAR", "VIP"]})
-
-        options = clientes._segment_filter_options(df)
-
-        assert options == ["Todos", "REGULAR", "TOP_TIER", "VIP"]
-        assert [clientes._segment_label(option) for option in options] == [
-            "Todos",
-            "Regular",
-            "Top tier",
-            "VIP",
-        ]
-
-    def test_apply_customer_filters_uses_segment_and_state(self):
-        df = pd.DataFrame(
-            {
-                "cliente_id": [1, 2, 3],
-                "segmento_cliente": ["VIP", "REGULAR", "VIP"],
-                "estado": ["SP", "RJ", "RJ"],
-            }
-        )
-
-        result = clientes._apply_customer_filters(df, "VIP", "RJ")
-
-        assert result["cliente_id"].tolist() == [3]
-
     def test_top_customers_limits_by_top_n_and_preserves_ranking_order(self):
         df = pd.DataFrame(
             {
@@ -304,48 +273,6 @@ class TestClientesHelpers:
 
 
 class TestPricingHelpers:
-    def test_apply_pricing_filters_uses_category_brand_and_raw_classification(self):
-        df = pd.DataFrame(
-            {
-                "produto_id": [1, 2, 3],
-                "categoria": ["Eletrônicos", "Eletrônicos", "Casa"],
-                "marca": ["Marca A", "Marca B", "Marca A"],
-                "classificacao_preco": [
-                    "MAIS_CARO_QUE_TODOS",
-                    "ACIMA_DA_MEDIA",
-                    "MAIS_CARO_QUE_TODOS",
-                ],
-            }
-        )
-
-        result = pricing._apply_pricing_filters(
-            df,
-            categories=["Eletrônicos"],
-            brands=["Marca A"],
-            classifications=["MAIS_CARO_QUE_TODOS"],
-        )
-
-        assert result["produto_id"].tolist() == [1]
-
-    def test_apply_pricing_filters_returns_empty_for_empty_selection(self):
-        df = pd.DataFrame(
-            {
-                "produto_id": [1],
-                "categoria": ["Eletrônicos"],
-                "marca": ["Marca A"],
-                "classificacao_preco": ["MAIS_CARO_QUE_TODOS"],
-            }
-        )
-
-        result = pricing._apply_pricing_filters(
-            df,
-            categories=[],
-            brands=["Marca A"],
-            classifications=["MAIS_CARO_QUE_TODOS"],
-        )
-
-        assert result.empty
-
     def test_pricing_metrics_calculates_revenue_risk_and_exposure_category(self):
         df = pd.DataFrame(
             {
@@ -496,3 +423,17 @@ class TestKpiCard:
     def test_contem_cor_tema(self):
         html = kpi_card("Label", "Value", "#009E73")
         assert "#009E73" in html
+
+
+class TestSegmentLabel:
+    def test_formats_known_segments_for_display(self):
+        from utils import segment_label
+
+        assert segment_label("VIP") == "VIP"
+        assert segment_label("TOP_TIER") == "Top tier"
+        assert segment_label("REGULAR") == "Regular"
+
+    def test_falls_back_to_raw_value_for_unknown_segments(self):
+        from utils import segment_label
+
+        assert segment_label("DESCONHECIDO") == "DESCONHECIDO"

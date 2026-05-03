@@ -2,43 +2,22 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from db import get_data
+from filters import FilterSelection, apply_customer
 from utils import (
-    FILTER_ALL,
     SEGMENT_COLORS,
-    SEGMENT_LABELS,
     MissingColumnsError,
     apply_chart_style,
-    build_filter_options,
-    filter_equals,
     fmt_brl,
     fmt_brl_compact,
     fmt_int,
     fmt_pct,
     kpi_card,
+    segment_label,
     validate_customers_columns,
 )
 
 THEME_COLOR = "#009E73"
 QUERY = "SELECT * FROM public_gold_cs.gold_customer_success_clientes_segmentacao"
-TOP_N_OPTIONS = [5, 10, 15, 20, 50]
-
-
-def _segment_label(value: str) -> str:
-    return SEGMENT_LABELS.get(value, value)
-
-
-def _segment_filter_options(df: pd.DataFrame) -> list[str]:
-    segments = df["segmento_cliente"].dropna().unique().tolist()
-    return [FILTER_ALL, *sorted(segments, key=_segment_label)]
-
-
-def _apply_customer_filters(
-    df: pd.DataFrame,
-    segment_selected: str,
-    state_selected: str,
-) -> pd.DataFrame:
-    result = filter_equals(df, "segmento_cliente", segment_selected)
-    return filter_equals(result, "estado", state_selected)
 
 
 def _top_customers(df: pd.DataFrame, top_n: int) -> pd.DataFrame:
@@ -49,7 +28,7 @@ def _format_customer_table(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     result["receita_total"] = result["receita_total"].map(fmt_brl)
     result["ticket_medio"] = result["ticket_medio"].map(fmt_brl)
-    result["segmento_cliente"] = result["segmento_cliente"].map(_segment_label)
+    result["segmento_cliente"] = result["segmento_cliente"].map(segment_label)
     return result.rename(
         columns={
             "cliente_id": "ID do cliente",
@@ -66,7 +45,7 @@ def _format_customer_table(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def render() -> None:
+def render(selection: FilterSelection) -> None:
     try:
         df = get_data(QUERY)
         validate_customers_columns(df)
@@ -78,37 +57,19 @@ def render() -> None:
         return
 
     try:
-        _render_customers_page(df)
+        _render_customers_page(df, selection)
     except Exception:
         st.error("Não foi possível renderizar a página de clientes.")
         return
 
 
-def _render_customers_page(df: pd.DataFrame) -> None:
-    with st.sidebar:
-        st.markdown("#### Filtros - Clientes")
-        segment_selected = st.selectbox(
-            "Segmento",
-            _segment_filter_options(df),
-            format_func=_segment_label,
-            key="clientes_segmento",
-        )
-        state_selected = st.selectbox(
-            "Estado",
-            build_filter_options(df["estado"]),
-            key="clientes_estado",
-        )
-        top_n = st.selectbox(
-            "Top N Clientes",
-            TOP_N_OPTIONS,
-            index=1,
-            key="clientes_top_n",
-        )
-
-    df_f = _apply_customer_filters(df, segment_selected, state_selected)
+def _render_customers_page(df: pd.DataFrame, selection: FilterSelection) -> None:
+    df_f = apply_customer(df, selection)
     if df_f.empty:
         st.warning("Nenhum cliente encontrado para os filtros selecionados.")
         return
+
+    top_n = selection.top_n
 
     st.markdown(
         f"<h1 style='color:#0F172A;font-size:28px;font-weight:700;"
@@ -140,7 +101,7 @@ def _render_customers_page(df: pd.DataFrame) -> None:
         total_clientes=("cliente_id", "count")
     )
     df_seg["percentual"] = df_seg["total_clientes"] / df_seg["total_clientes"].sum() * 100
-    df_seg["segmento_label"] = df_seg["segmento_cliente"].map(_segment_label)
+    df_seg["segmento_label"] = df_seg["segmento_cliente"].map(segment_label)
     df_seg["clientes_label"] = df_seg["total_clientes"].map(fmt_int)
     df_seg["texto"] = df_seg.apply(
         lambda row: f"{fmt_int(row['total_clientes'])} ({fmt_pct(row['percentual'])})",
@@ -173,7 +134,7 @@ def _render_customers_page(df: pd.DataFrame) -> None:
     )
 
     df_rev_seg = df_f.groupby("segmento_cliente", as_index=False)["receita_total"].sum()
-    df_rev_seg["segmento_label"] = df_rev_seg["segmento_cliente"].map(_segment_label)
+    df_rev_seg["segmento_label"] = df_rev_seg["segmento_cliente"].map(segment_label)
     df_rev_seg["receita_label"] = df_rev_seg["receita_total"].map(fmt_brl_compact)
     fig2 = px.bar(
         df_rev_seg.sort_values("receita_total", ascending=False),
@@ -214,8 +175,7 @@ def _render_customers_page(df: pd.DataFrame) -> None:
     )
     fig3.update_traces(
         hovertemplate=(
-            "Cliente: %{y}<br>Receita: %{customdata[0]}<br>"
-            "Ranking: %{customdata[1]}<extra></extra>"
+            "Cliente: %{y}<br>Receita: %{customdata[0]}<br>Ranking: %{customdata[1]}<extra></extra>"
         ),
         textfont=dict(color="#0F172A", size=10),
         textposition="outside",
@@ -245,8 +205,7 @@ def _render_customers_page(df: pd.DataFrame) -> None:
     )
     fig4.update_traces(
         hovertemplate=(
-            "Estado: %{y}<br>Receita: %{customdata[0]}<br>"
-            "Clientes: %{customdata[1]}<extra></extra>"
+            "Estado: %{y}<br>Receita: %{customdata[0]}<br>Clientes: %{customdata[1]}<extra></extra>"
         ),
         textfont=dict(color="#0F172A", size=10),
         textposition="outside",

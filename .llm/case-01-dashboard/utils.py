@@ -100,9 +100,7 @@ DAY_LABELS = {
 class MissingColumnsError(ValueError):
     def __init__(self, table_name: str, missing: list[str] | tuple[str, ...]) -> None:
         missing_text = ", ".join(missing)
-        super().__init__(
-            f"A tabela {table_name} não contém as colunas esperadas: {missing_text}."
-        )
+        super().__init__(f"A tabela {table_name} não contém as colunas esperadas: {missing_text}.")
 
 
 def validate_columns(
@@ -227,6 +225,10 @@ def fmt_pct(value: float) -> str:
 
 def classification_label(value: str) -> str:
     return CLASS_LABELS.get(value, str(value).replace("_", " ").title())
+
+
+def segment_label(value: str) -> str:
+    return SEGMENT_LABELS.get(value, str(value))
 
 
 def month_filter_options(months: pd.Series) -> list[int]:

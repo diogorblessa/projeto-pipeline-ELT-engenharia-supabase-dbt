@@ -2,13 +2,12 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from db import get_data
+from filters import FilterSelection, apply_pricing
 from utils import (
     CLASS_COLORS,
     MissingColumnsError,
     apply_chart_style,
-    build_filter_options,
     classification_label,
-    filter_in,
     fmt_brl,
     fmt_brl_compact,
     fmt_int,
@@ -22,26 +21,6 @@ QUERY = "SELECT * FROM public_gold_pricing.gold_pricing_precos_competitividade"
 RISK_CLASS = "MAIS_CARO_QUE_TODOS"
 
 
-def _multiselect_options(values: pd.Series) -> list[str]:
-    return build_filter_options(values)[1:]
-
-
-def _classification_filter_options(df: pd.DataFrame) -> list[str]:
-    classifications = df["classificacao_preco"].dropna().unique().tolist()
-    return sorted(classifications, key=classification_label)
-
-
-def _apply_pricing_filters(
-    df: pd.DataFrame,
-    categories: list[str],
-    brands: list[str],
-    classifications: list[str],
-) -> pd.DataFrame:
-    result = filter_in(df, "categoria", categories)
-    result = filter_in(result, "marca", brands)
-    return filter_in(result, "classificacao_preco", classifications)
-
-
 def _pricing_metrics(df: pd.DataFrame) -> dict[str, float | int | str]:
     risk_df = df[df["classificacao_preco"] == RISK_CLASS]
     receita_total = float(df["receita_total"].sum())
@@ -51,9 +30,7 @@ def _pricing_metrics(df: pd.DataFrame) -> dict[str, float | int | str]:
     if risk_df.empty:
         categoria_maior_exposicao = "Sem exposição"
     else:
-        categoria_maior_exposicao = (
-            risk_df.groupby("categoria")["receita_total"].sum().idxmax()
-        )
+        categoria_maior_exposicao = risk_df.groupby("categoria")["receita_total"].sum().idxmax()
 
     return {
         "total_produtos": len(df),
@@ -93,9 +70,7 @@ def _format_alert_table(df: pd.DataFrame) -> pd.DataFrame:
         "receita_total",
     ]:
         result[column] = result[column].map(fmt_brl)
-    result["diferenca_percentual_vs_media"] = result["diferenca_percentual_vs_media"].map(
-        fmt_pct
-    )
+    result["diferenca_percentual_vs_media"] = result["diferenca_percentual_vs_media"].map(fmt_pct)
     return result.rename(
         columns={
             "produto_id": "ID do produto",
@@ -111,7 +86,7 @@ def _format_alert_table(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def render() -> None:
+def render(selection: FilterSelection) -> None:
     try:
         df = get_data(QUERY)
         validate_pricing_columns(df)
@@ -123,40 +98,14 @@ def render() -> None:
         return
 
     try:
-        _render_pricing_page(df)
+        _render_pricing_page(df, selection)
     except Exception:
         st.error("Não foi possível renderizar a página de pricing.")
         return
 
 
-def _render_pricing_page(df: pd.DataFrame) -> None:
-    category_options = _multiselect_options(df["categoria"])
-    brand_options = _multiselect_options(df["marca"])
-    classification_options = _classification_filter_options(df)
-
-    with st.sidebar:
-        st.markdown("#### Filtros - Pricing")
-        categories = st.multiselect(
-            "Categoria",
-            category_options,
-            default=category_options,
-            key="pricing_categorias",
-        )
-        brands = st.multiselect(
-            "Marca",
-            brand_options,
-            default=brand_options,
-            key="pricing_marcas",
-        )
-        classifications = st.multiselect(
-            "Classificação",
-            classification_options,
-            default=classification_options,
-            format_func=classification_label,
-            key="pricing_classificacoes",
-        )
-
-    df_f = _apply_pricing_filters(df, categories, brands, classifications)
+def _render_pricing_page(df: pd.DataFrame, selection: FilterSelection) -> None:
+    df_f = apply_pricing(df, selection)
 
     st.markdown(
         f"<h1 style='color:#0F172A;font-size:28px;font-weight:700;"
@@ -312,9 +261,7 @@ def _render_volume_chart(df: pd.DataFrame) -> None:
         st.info("Não há dados suficientes para cruzar competitividade e volume de vendas.")
         return
 
-    df_volume["classificacao_label"] = df_volume["classificacao_preco"].map(
-        classification_label
-    )
+    df_volume["classificacao_label"] = df_volume["classificacao_preco"].map(classification_label)
     df_volume["diferenca_label"] = df_volume["diferenca_percentual_vs_media"].map(fmt_pct)
     df_volume["quantidade_label"] = df_volume["quantidade_total"].map(fmt_int)
     df_volume["receita_label"] = df_volume["receita_total"].map(fmt_brl_compact)

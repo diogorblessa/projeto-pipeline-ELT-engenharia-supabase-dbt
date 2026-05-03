@@ -2,18 +2,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from db import get_data
+from filters import FilterSelection, apply_temporal
 from utils import (
     DAY_ORDER,
-    FILTER_ALL,
     MissingColumnsError,
     apply_chart_style,
-    build_filter_options,
-    filter_equals,
     fmt_brl,
     fmt_brl_compact,
     fmt_int,
     kpi_card,
-    month_filter_options,
     normalize_sales_columns,
     validate_sales_columns,
 )
@@ -22,7 +19,7 @@ THEME_COLOR = "#0072B2"
 QUERY = "SELECT * FROM public_gold_sales.gold_sales_vendas_temporais"
 
 
-def render():
+def render(selection: FilterSelection) -> None:
     try:
         df = get_data(QUERY)
         df = normalize_sales_columns(df)
@@ -35,35 +32,14 @@ def render():
         return
 
     try:
-        _render_sales_page(df)
+        _render_sales_page(df, selection)
     except Exception:
         st.error("Não foi possível renderizar a página de vendas.")
         return
 
 
-def _render_sales_page(df: pd.DataFrame) -> None:
-    with st.sidebar:
-        st.markdown("#### Filtros - Vendas")
-        ano_sel = st.selectbox(
-            "Ano",
-            build_filter_options(df["ano_venda"]),
-            key="vendas_ano",
-        )
-        mes_sel = st.selectbox(
-            "Mês",
-            [FILTER_ALL, *[str(mes) for mes in month_filter_options(df["mes_venda"])]],
-            key="vendas_mes",
-        )
-        dia_sel = st.selectbox(
-            "Dia da Semana",
-            [FILTER_ALL, *DAY_ORDER],
-            key="vendas_dia_semana",
-        )
-
-    df_f = filter_equals(df, "ano_venda", ano_sel)
-    if mes_sel != FILTER_ALL:
-        df_f = df_f[df_f["mes_venda"] == int(mes_sel)]
-    df_f = filter_equals(df_f, "dia_semana_nome", dia_sel)
+def _render_sales_page(df: pd.DataFrame, selection: FilterSelection) -> None:
+    df_f = apply_temporal(df, selection)
     if df_f.empty:
         st.warning("Nenhum dado encontrado para os filtros selecionados.")
         return
