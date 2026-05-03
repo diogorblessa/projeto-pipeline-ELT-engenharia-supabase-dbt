@@ -27,15 +27,15 @@ class FilterDef:
 
 
 FILTER_REGISTRY: tuple[FilterDef, ...] = (
-    FilterDef("ano",           "Ano",             "temporal", ("Vendas",)),
-    FilterDef("mes",           "Mês",             "temporal", ("Vendas",)),
-    FilterDef("dia_semana",    "Dia da Semana",   "temporal", ("Vendas",)),
-    FilterDef("segmento",      "Segmento",        "cliente",  ("Clientes",)),
-    FilterDef("estado",        "Estado",          "cliente",  ("Clientes",)),
-    FilterDef("top_n",         "Top N Clientes",  "cliente",  ("Clientes",)),
-    FilterDef("categoria",     "Categoria",       "produto",  ("Pricing",)),
-    FilterDef("marca",         "Marca",           "produto",  ("Pricing",)),
-    FilterDef("classificacao", "Classificação",   "produto",  ("Pricing",)),
+    FilterDef("ano", "Ano", "temporal", ("Vendas",)),
+    FilterDef("mes", "Mês", "temporal", ("Vendas",)),
+    FilterDef("dia_semana", "Dia da Semana", "temporal", ("Vendas",)),
+    FilterDef("segmento", "Segmento", "cliente", ("Clientes",)),
+    FilterDef("estado", "Estado", "cliente", ("Clientes",)),
+    FilterDef("top_n", "Top N Clientes", "cliente", ("Clientes",)),
+    FilterDef("categoria", "Categoria", "produto", ("Pricing",)),
+    FilterDef("marca", "Marca", "produto", ("Pricing",)),
+    FilterDef("classificacao", "Classificação", "produto", ("Pricing",)),
 )
 
 SECTION_TITLES: dict[SectionId, str] = {
@@ -102,8 +102,18 @@ def is_filter_applicable(filter_key: str, page: Page) -> bool:
 
 
 MES_PT: list[str] = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
 ]
 
 MES_PT_TO_INT: dict[str, int] = {nome: i + 1 for i, nome in enumerate(MES_PT)}
@@ -222,28 +232,21 @@ def render_sidebar(page: Page) -> FilterSelection:
         st.divider()
 
         if error:
-            st.warning(
-                "Não foi possível carregar opções de filtros. "
-                "Páginas operam sem filtragem."
-            )
+            st.warning("Não foi possível carregar opções de filtros. Páginas operam sem filtragem.")
 
         last_section = None
         for fdef in FILTER_REGISTRY:
             if fdef.section != last_section:
                 section_html = (
                     f'<div class="sidebar-section-title">'
-                    f'{SECTION_TITLES[fdef.section].upper()}</div>'
+                    f"{SECTION_TITLES[fdef.section].upper()}</div>"
                 )
                 st.markdown(section_html, unsafe_allow_html=True)
                 last_section = fdef.section
 
             applies = is_filter_applicable(fdef.key, page)
             choices, format_func = _options_for(fdef.key, options)
-            help_text = (
-                None
-                if applies
-                else f"Disponível em {', '.join(fdef.pages)}."
-            )
+            help_text = None if applies else f"Disponível em {', '.join(fdef.pages)}."
             kwargs = {
                 "options": choices,
                 "key": fdef.key,

@@ -30,9 +30,7 @@ def _pricing_metrics(df: pd.DataFrame) -> dict[str, float | int | str]:
     if risk_df.empty:
         categoria_maior_exposicao = "Sem exposição"
     else:
-        categoria_maior_exposicao = (
-            risk_df.groupby("categoria")["receita_total"].sum().idxmax()
-        )
+        categoria_maior_exposicao = risk_df.groupby("categoria")["receita_total"].sum().idxmax()
 
     return {
         "total_produtos": len(df),
@@ -72,9 +70,7 @@ def _format_alert_table(df: pd.DataFrame) -> pd.DataFrame:
         "receita_total",
     ]:
         result[column] = result[column].map(fmt_brl)
-    result["diferenca_percentual_vs_media"] = result["diferenca_percentual_vs_media"].map(
-        fmt_pct
-    )
+    result["diferenca_percentual_vs_media"] = result["diferenca_percentual_vs_media"].map(fmt_pct)
     return result.rename(
         columns={
             "produto_id": "ID do produto",
@@ -265,9 +261,7 @@ def _render_volume_chart(df: pd.DataFrame) -> None:
         st.info("Não há dados suficientes para cruzar competitividade e volume de vendas.")
         return
 
-    df_volume["classificacao_label"] = df_volume["classificacao_preco"].map(
-        classification_label
-    )
+    df_volume["classificacao_label"] = df_volume["classificacao_preco"].map(classification_label)
     df_volume["diferenca_label"] = df_volume["diferenca_percentual_vs_media"].map(fmt_pct)
     df_volume["quantidade_label"] = df_volume["quantidade_total"].map(fmt_int)
     df_volume["receita_label"] = df_volume["receita_total"].map(fmt_brl_compact)

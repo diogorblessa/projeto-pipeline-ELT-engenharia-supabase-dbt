@@ -175,8 +175,7 @@ def _render_customers_page(df: pd.DataFrame, selection: FilterSelection) -> None
     )
     fig3.update_traces(
         hovertemplate=(
-            "Cliente: %{y}<br>Receita: %{customdata[0]}<br>"
-            "Ranking: %{customdata[1]}<extra></extra>"
+            "Cliente: %{y}<br>Receita: %{customdata[0]}<br>Ranking: %{customdata[1]}<extra></extra>"
         ),
         textfont=dict(color="#0F172A", size=10),
         textposition="outside",
@@ -206,8 +205,7 @@ def _render_customers_page(df: pd.DataFrame, selection: FilterSelection) -> None
     )
     fig4.update_traces(
         hovertemplate=(
-            "Estado: %{y}<br>Receita: %{customdata[0]}<br>"
-            "Clientes: %{customdata[1]}<extra></extra>"
+            "Estado: %{y}<br>Receita: %{customdata[0]}<br>Clientes: %{customdata[1]}<extra></extra>"
         ),
         textfont=dict(color="#0F172A", size=10),
         textposition="outside",

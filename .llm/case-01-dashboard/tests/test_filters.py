@@ -7,8 +7,18 @@ class TestMesPt:
         from filters import MES_PT
 
         assert MES_PT == [
-            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
         ]
 
     def test_mes_pt_to_int_round_trips(self):
@@ -283,13 +293,9 @@ class TestOptionsQueriesSecurity:
 
         assert "public_gold_sales.gold_sales_vendas_temporais" in SALES_OPTIONS_QUERY
         assert (
-            "public_gold_cs.gold_customer_success_clientes_segmentacao"
-            in CUSTOMERS_OPTIONS_QUERY
+            "public_gold_cs.gold_customer_success_clientes_segmentacao" in CUSTOMERS_OPTIONS_QUERY
         )
-        assert (
-            "public_gold_pricing.gold_pricing_precos_competitividade"
-            in PRICING_OPTIONS_QUERY
-        )
+        assert "public_gold_pricing.gold_pricing_precos_competitividade" in PRICING_OPTIONS_QUERY
 
     def test_queries_do_not_reference_pii_or_identifier_columns(self):
         from filters import (
@@ -331,6 +337,7 @@ class TestOptionsQueriesSecurity:
 class TestLoadFilterOptions:
     def test_returns_normalized_dict_with_all_expected_keys(self, monkeypatch):
         import filters
+
         sales_df = pd.DataFrame(
             {
                 "ano_venda": [2026, 2024, 2025, 2025],
@@ -577,9 +584,15 @@ class TestRenderSidebar:
 
         labels = [call["label"] for call in st_stub.selectbox_calls]
         assert labels == [
-            "Ano", "Mês", "Dia da Semana",
-            "Segmento", "Estado", "Top N Clientes",
-            "Categoria", "Marca", "Classificação",
+            "Ano",
+            "Mês",
+            "Dia da Semana",
+            "Segmento",
+            "Estado",
+            "Top N Clientes",
+            "Categoria",
+            "Marca",
+            "Classificação",
         ]
 
     def test_disables_filters_outside_active_page(self, monkeypatch):
@@ -613,9 +626,7 @@ class TestRenderSidebar:
 
         filters.render_sidebar("Vendas")
 
-        help_by_label = {
-            call["label"]: call.get("help") for call in st_stub.selectbox_calls
-        }
+        help_by_label = {call["label"]: call.get("help") for call in st_stub.selectbox_calls}
         assert help_by_label["Ano"] is None
         assert help_by_label["Segmento"] == "Disponível em Clientes."
         assert help_by_label["Categoria"] == "Disponível em Pricing."
@@ -631,9 +642,15 @@ class TestRenderSidebar:
 
         keys = [call.get("key") for call in st_stub.selectbox_calls]
         assert keys == [
-            "ano", "mes", "dia_semana",
-            "segmento", "estado", "top_n",
-            "categoria", "marca", "classificacao",
+            "ano",
+            "mes",
+            "dia_semana",
+            "segmento",
+            "estado",
+            "top_n",
+            "categoria",
+            "marca",
+            "classificacao",
         ]
 
     def test_warns_when_options_failed_to_load(self, monkeypatch):
@@ -649,10 +666,7 @@ class TestRenderSidebar:
 
         filters.render_sidebar("Vendas")
 
-        assert any(
-            "Não foi possível carregar opções de filtros" in msg
-            for msg in st_stub.warnings
-        )
+        assert any("Não foi possível carregar opções de filtros" in msg for msg in st_stub.warnings)
 
     def test_includes_reload_button(self, monkeypatch):
         import filters

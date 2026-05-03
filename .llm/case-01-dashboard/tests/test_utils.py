@@ -28,10 +28,7 @@ class TestColumnContracts:
 
     def test_table_names_match_dashboard_marts(self):
         assert utils.SALES_TABLE == "public_gold_sales.gold_sales_vendas_temporais"
-        assert (
-            utils.CUSTOMERS_TABLE
-            == "public_gold_cs.gold_customer_success_clientes_segmentacao"
-        )
+        assert utils.CUSTOMERS_TABLE == "public_gold_cs.gold_customer_success_clientes_segmentacao"
         assert utils.PRICING_TABLE == "public_gold_pricing.gold_pricing_precos_competitividade"
 
     def test_sales_required_columns_match_sales_mart_without_weekday_aliases(self):
@@ -48,9 +45,7 @@ class TestColumnContracts:
             "ticket_medio",
         )
         assert {"dia_da_semana", "dia_semana_nome"} == utils.SALES_WEEKDAY_ALIASES
-        assert not set(utils.SALES_REQUIRED_COLUMNS).intersection(
-            utils.SALES_WEEKDAY_ALIASES
-        )
+        assert not set(utils.SALES_REQUIRED_COLUMNS).intersection(utils.SALES_WEEKDAY_ALIASES)
 
     def test_customers_required_columns_match_customer_mart(self):
         assert utils.CUSTOMERS_REQUIRED_COLUMNS == (

@@ -100,9 +100,7 @@ DAY_LABELS = {
 class MissingColumnsError(ValueError):
     def __init__(self, table_name: str, missing: list[str] | tuple[str, ...]) -> None:
         missing_text = ", ".join(missing)
-        super().__init__(
-            f"A tabela {table_name} não contém as colunas esperadas: {missing_text}."
-        )
+        super().__init__(f"A tabela {table_name} não contém as colunas esperadas: {missing_text}.")
 
 
 def validate_columns(
