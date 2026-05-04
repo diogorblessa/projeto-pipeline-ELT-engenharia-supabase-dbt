@@ -1,10 +1,49 @@
+import importlib
+import sys
 from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
-from filters import render_sidebar
 
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
+DASHBOARD_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = DASHBOARD_DIR.parent.parent
+LOCAL_MODULES = (
+    "utils",
+    "filters",
+    "db",
+    "views",
+    "views.vendas",
+    "views.clientes",
+    "views.pricing",
+)
+dashboard_path = str(DASHBOARD_DIR)
+if dashboard_path not in sys.path:
+    sys.path.insert(0, dashboard_path)
+
+
+def _is_dashboard_module(module) -> bool:
+    module_file = getattr(module, "__file__", None)
+    if not module_file:
+        return False
+    try:
+        return Path(module_file).resolve().is_relative_to(DASHBOARD_DIR)
+    except OSError:
+        return False
+
+
+def _clear_stale_dashboard_modules() -> None:
+    importlib.invalidate_caches()
+    for module_name in LOCAL_MODULES:
+        module = sys.modules.get(module_name)
+        if module is not None and _is_dashboard_module(module):
+            sys.modules.pop(module_name, None)
+
+
+_clear_stale_dashboard_modules()
+
+load_dotenv(PROJECT_ROOT / ".env")
+
+from filters import render_sidebar  # noqa: E402
 
 st.set_page_config(
     page_title="E-commerce Analytics",
@@ -51,6 +90,33 @@ def inject_css():
         }
         [data-testid="stSidebar"] label:has(+ div [aria-disabled="true"]) {
             color: #94A3B8 !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button {
+            background-color: #F1F5F9 !important;
+            border: 1px solid #E2E8F0 !important;
+            color: #0F172A !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button:hover {
+            background-color: #E2E8F0 !important;
+            border-color: #CBD5E1 !important;
+            color: #0F172A !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button p {
+            color: #0F172A !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] {
+            background-color: #0072B2 !important;
+            border-color: #005F95 !important;
+            color: #FFFFFF !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"]:hover {
+            background-color: #005F95 !important;
+            border-color: #004F7C !important;
+            color: #FFFFFF !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] p {
+            color: #FFFFFF !important;
         }
         .sidebar-brand {
             padding: 0.25rem 0 0.75rem;
@@ -162,4 +228,5 @@ def main():
         render(selection)
 
 
-main()
+if __name__ == "__main__":
+    main()

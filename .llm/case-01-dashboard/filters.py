@@ -96,6 +96,12 @@ def selection_from_state(state) -> FilterSelection:
     )
 
 
+def clear_filter_state(state) -> None:
+    defaults = FilterSelection()
+    for key, value in defaults.__dict__.items():
+        state[key] = value
+
+
 def is_filter_applicable(filter_key: str, page: Page) -> bool:
     fdef = next((f for f in FILTER_REGISTRY if f.key == filter_key), None)
     return fdef is not None and page in fdef.pages
@@ -119,7 +125,7 @@ MES_PT: list[str] = [
 MES_PT_TO_INT: dict[str, int] = {nome: i + 1 for i, nome in enumerate(MES_PT)}
 
 SALES_OPTIONS_QUERY = """
-SELECT DISTINCT ano_venda, mes_venda, dia_semana_nome
+SELECT DISTINCT ano_venda, mes_venda, dia_da_semana AS dia_semana_nome
 FROM public_gold_sales.gold_sales_vendas_temporais
 WHERE ano_venda IS NOT NULL
 """.strip()
@@ -135,45 +141,108 @@ FROM public_gold_pricing.gold_pricing_precos_competitividade
 """.strip()
 
 TOP_N_OPTIONS: list[int] = [5, 10, 15, 20, 50]
+DEFAULT_YEAR_OPTIONS: list[int] = [2024, 2025, 2026]
+DEFAULT_MONTH_OPTIONS: list[int] = list(range(1, 13))
+DEFAULT_SEGMENT_OPTIONS: list[str] = ["REGULAR", "TOP_TIER", "VIP"]
+DEFAULT_CLASSIFICATION_OPTIONS: list[str] = sorted(
+    [
+        "MAIS_CARO_QUE_TODOS",
+        "ACIMA_DA_MEDIA",
+        "NA_MEDIA",
+        "ABAIXO_DA_MEDIA",
+        "MAIS_BARATO_QUE_TODOS",
+        "SEM_DADOS",
+    ],
+    key=classification_label,
+)
 
 
-def _load_filter_options_uncached() -> dict:
-    empty: dict = {
-        "anos": [],
-        "meses": [],
-        "dias_semana": [],
-        "segmentos": [],
+def _base_filter_options() -> dict:
+    return {
+        "anos": DEFAULT_YEAR_OPTIONS,
+        "meses": DEFAULT_MONTH_OPTIONS,
+        "dias_semana": DAY_ORDER,
+        "segmentos": DEFAULT_SEGMENT_OPTIONS,
         "estados": [],
         "top_n": TOP_N_OPTIONS,
         "categorias": [],
         "marcas": [],
-        "classificacoes": [],
+        "classificacoes": DEFAULT_CLASSIFICATION_OPTIONS,
     }
+
+
+def _load_sales_options() -> tuple[dict, str | None]:
     try:
         sales = get_data(SALES_OPTIONS_QUERY)
-        customers = get_data(CUSTOMERS_OPTIONS_QUERY)
-        pricing = get_data(PRICING_OPTIONS_QUERY)
     except Exception as exc:
-        return {**empty, "_error": str(exc)}
+        return {
+            "anos": DEFAULT_YEAR_OPTIONS,
+            "meses": DEFAULT_MONTH_OPTIONS,
+            "dias_semana": DAY_ORDER,
+        }, f"Vendas: {exc}"
 
     dias_unicos = set(sales["dia_semana_nome"].dropna())
+    meses = sorted(sales["mes_venda"].dropna().astype(int).unique().tolist())
     return {
         "anos": sorted(sales["ano_venda"].dropna().astype(int).unique().tolist()),
-        "meses": sorted(sales["mes_venda"].dropna().astype(int).unique().tolist()),
-        "dias_semana": [d for d in DAY_ORDER if d in dias_unicos],
-        "segmentos": sorted(
-            customers["segmento_cliente"].dropna().unique().tolist(),
-            key=segment_label,
-        ),
+        "meses": meses or DEFAULT_MONTH_OPTIONS,
+        "dias_semana": [d for d in DAY_ORDER if d in dias_unicos] or DAY_ORDER,
+    }, None
+
+
+def _load_customer_options() -> tuple[dict, str | None]:
+    try:
+        customers = get_data(CUSTOMERS_OPTIONS_QUERY)
+    except Exception as exc:
+        return {
+            "segmentos": DEFAULT_SEGMENT_OPTIONS,
+            "estados": [],
+        }, f"Clientes: {exc}"
+
+    segmentos = sorted(
+        customers["segmento_cliente"].dropna().unique().tolist(),
+        key=segment_label,
+    )
+    return {
+        "segmentos": segmentos or DEFAULT_SEGMENT_OPTIONS,
         "estados": sorted(customers["estado"].dropna().unique().tolist()),
-        "top_n": TOP_N_OPTIONS,
+    }, None
+
+
+def _load_pricing_options() -> tuple[dict, str | None]:
+    try:
+        pricing = get_data(PRICING_OPTIONS_QUERY)
+    except Exception as exc:
+        return {
+            "categorias": [],
+            "marcas": [],
+            "classificacoes": DEFAULT_CLASSIFICATION_OPTIONS,
+        }, f"Pricing: {exc}"
+
+    classificacoes = sorted(
+        pricing["classificacao_preco"].dropna().unique().tolist(),
+        key=classification_label,
+    )
+    return {
         "categorias": sorted(pricing["categoria"].dropna().unique().tolist()),
         "marcas": sorted(pricing["marca"].dropna().unique().tolist()),
-        "classificacoes": sorted(
-            pricing["classificacao_preco"].dropna().unique().tolist(),
-            key=classification_label,
-        ),
-    }
+        "classificacoes": classificacoes or DEFAULT_CLASSIFICATION_OPTIONS,
+    }, None
+
+
+def _load_filter_options_uncached() -> dict:
+    options = _base_filter_options()
+    errors = []
+
+    for loader in (_load_sales_options, _load_customer_options, _load_pricing_options):
+        loaded_options, error = loader()
+        options.update(loaded_options)
+        if error:
+            errors.append(error)
+
+    if errors:
+        options["_error"] = "; ".join(errors)
+    return options
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -232,7 +301,18 @@ def render_sidebar(page: Page) -> FilterSelection:
         st.divider()
 
         if error:
-            st.warning("Não foi possível carregar opções de filtros. Páginas operam sem filtragem.")
+            st.warning(
+                "Não foi possível carregar algumas opções do banco. "
+                "Filtros dinâmicos podem ficar limitados."
+            )
+
+        if st.button(
+            "Limpar Filtros",
+            type="primary",
+            help="Volta todos os filtros para Todos e Top N para 10.",
+        ):
+            clear_filter_state(st.session_state)
+            st.rerun()
 
         last_section = None
         for fdef in FILTER_REGISTRY:

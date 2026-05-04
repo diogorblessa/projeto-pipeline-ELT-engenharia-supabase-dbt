@@ -325,6 +325,7 @@ class TestOptionsQueriesSecurity:
         assert "ano_venda" in SALES_OPTIONS_QUERY
         assert "mes_venda" in SALES_OPTIONS_QUERY
         assert "dia_semana_nome" in SALES_OPTIONS_QUERY
+        assert "dia_da_semana AS dia_semana_nome" in SALES_OPTIONS_QUERY
 
         assert "segmento_cliente" in CUSTOMERS_OPTIONS_QUERY
         assert "estado" in CUSTOMERS_OPTIONS_QUERY
@@ -386,7 +387,7 @@ class TestLoadFilterOptions:
             "MAIS_CARO_QUE_TODOS",
         ]
 
-    def test_returns_safe_empty_options_on_database_error(self, monkeypatch):
+    def test_returns_contractual_fallback_options_on_database_error(self, monkeypatch):
         import filters
 
         def boom(query):
@@ -396,18 +397,71 @@ class TestLoadFilterOptions:
 
         options = filters._load_filter_options_uncached()
 
-        assert options == {
-            "anos": [],
-            "meses": [],
-            "dias_semana": [],
-            "segmentos": [],
-            "estados": [],
-            "top_n": [5, 10, 15, 20, 50],
-            "categorias": [],
-            "marcas": [],
-            "classificacoes": [],
-            "_error": "conexão recusada",
-        }
+        assert options["anos"] == [2024, 2025, 2026]
+        assert options["meses"] == list(range(1, 13))
+        assert options["dias_semana"] == filters.DAY_ORDER
+        assert options["segmentos"] == ["REGULAR", "TOP_TIER", "VIP"]
+        assert options["estados"] == []
+        assert options["top_n"] == [5, 10, 15, 20, 50]
+        assert options["categorias"] == []
+        assert options["marcas"] == []
+        assert options["classificacoes"] == [
+            "ABAIXO_DA_MEDIA",
+            "ACIMA_DA_MEDIA",
+            "MAIS_BARATO_QUE_TODOS",
+            "MAIS_CARO_QUE_TODOS",
+            "NA_MEDIA",
+            "SEM_DADOS",
+        ]
+        assert "conexão recusada" in options["_error"]
+
+    def test_partial_database_error_preserves_other_filter_domains(self, monkeypatch):
+        import filters
+
+        customers_df = pd.DataFrame(
+            {
+                "segmento_cliente": ["VIP", "REGULAR", "TOP_TIER", "VIP"],
+                "estado": ["SP", "RJ", "MG", "RJ"],
+            }
+        )
+        pricing_df = pd.DataFrame(
+            {
+                "categoria": ["Casa", "Eletrônicos", "Casa"],
+                "marca": ["Marca B", "Marca A", "Marca A"],
+                "classificacao_preco": [
+                    "ACIMA_DA_MEDIA",
+                    "MAIS_CARO_QUE_TODOS",
+                    "ABAIXO_DA_MEDIA",
+                ],
+            }
+        )
+
+        def get_data(query):
+            if query == filters.SALES_OPTIONS_QUERY:
+                raise RuntimeError("vendas indisponivel")
+            if query == filters.CUSTOMERS_OPTIONS_QUERY:
+                return customers_df
+            if query == filters.PRICING_OPTIONS_QUERY:
+                return pricing_df
+            raise AssertionError(query)
+
+        monkeypatch.setattr(filters, "get_data", get_data)
+
+        options = filters._load_filter_options_uncached()
+
+        assert options["anos"] == [2024, 2025, 2026]
+        assert options["meses"] == list(range(1, 13))
+        assert options["dias_semana"] == filters.DAY_ORDER
+        assert options["segmentos"] == ["REGULAR", "TOP_TIER", "VIP"]
+        assert options["estados"] == ["MG", "RJ", "SP"]
+        assert options["categorias"] == ["Casa", "Eletrônicos"]
+        assert options["marcas"] == ["Marca A", "Marca B"]
+        assert options["classificacoes"] == [
+            "ABAIXO_DA_MEDIA",
+            "ACIMA_DA_MEDIA",
+            "MAIS_CARO_QUE_TODOS",
+        ]
+        assert "vendas indisponivel" in options["_error"]
 
 
 class TestSelectionFromState:
@@ -511,13 +565,15 @@ class _SidebarStub:
 
 
 class _StreamlitStub:
-    def __init__(self, state=None):
+    def __init__(self, state=None, clicked_buttons=None):
         self.sidebar = _SidebarStub()
         self.session_state = state if state is not None else {}
+        self.clicked_buttons = set(clicked_buttons or [])
         self.selectbox_calls: list[dict] = []
         self.button_calls: list[dict] = []
         self.warnings: list[str] = []
         self.errors: list[str] = []
+        self.rerun_called = False
 
     def selectbox(self, label, options, **kwargs):
         self.selectbox_calls.append({"label": label, "options": options, **kwargs})
@@ -528,7 +584,7 @@ class _StreamlitStub:
 
     def button(self, label, **kwargs):
         self.button_calls.append({"label": label, **kwargs})
-        return False
+        return label in self.clicked_buttons
 
     def divider(self):
         return None
@@ -543,6 +599,7 @@ class _StreamlitStub:
         return None
 
     def rerun(self):
+        self.rerun_called = True
         return None
 
 
@@ -572,6 +629,21 @@ class TestRenderSidebar:
         assert isinstance(selection, filters.FilterSelection)
         assert selection.ano == filters.FILTER_ALL
         assert selection.top_n == 10
+
+    def test_warning_mentions_limited_dynamic_filters_on_error(self, monkeypatch):
+        import filters
+
+        options = {**self._options(), "_error": "Vendas: conexão recusada"}
+        st_stub = _StreamlitStub()
+        monkeypatch.setattr(filters, "st", st_stub)
+        monkeypatch.setattr(filters, "load_filter_options", lambda: options)
+
+        filters.render_sidebar("Vendas")
+
+        assert st_stub.warnings == [
+            "Não foi possível carregar algumas opções do banco. "
+            "Filtros dinâmicos podem ficar limitados."
+        ]
 
     def test_renders_nine_selectboxes_for_any_page(self, monkeypatch):
         import filters
@@ -666,7 +738,7 @@ class TestRenderSidebar:
 
         filters.render_sidebar("Vendas")
 
-        assert any("Não foi possível carregar opções de filtros" in msg for msg in st_stub.warnings)
+        assert any("Filtros dinâmicos podem ficar limitados" in msg for msg in st_stub.warnings)
 
     def test_includes_reload_button(self, monkeypatch):
         import filters
@@ -679,3 +751,49 @@ class TestRenderSidebar:
 
         button_labels = [call["label"] for call in st_stub.button_calls]
         assert "Recarregar opções" in button_labels
+
+def test_clear_filters_button_resets_filter_state(monkeypatch):
+    import filters
+
+    state = {
+        "ano": "2025",
+        "mes": "Junho",
+        "dia_semana": "Segunda",
+        "segmento": "VIP",
+        "estado": "SP",
+        "top_n": 20,
+        "categoria": "Eletronicos",
+        "marca": "Marca A",
+        "classificacao": "MAIS_CARO_QUE_TODOS",
+    }
+    st_stub = _StreamlitStub(state=state, clicked_buttons={"Limpar Filtros"})
+    monkeypatch.setattr(filters, "st", st_stub)
+    monkeypatch.setattr(filters, "load_filter_options", lambda: TestRenderSidebar()._options())
+
+    filters.render_sidebar("Vendas")
+
+    assert st_stub.session_state == {
+        "ano": filters.FILTER_ALL,
+        "mes": filters.FILTER_ALL,
+        "dia_semana": filters.FILTER_ALL,
+        "segmento": filters.FILTER_ALL,
+        "estado": filters.FILTER_ALL,
+        "top_n": 10,
+        "categoria": filters.FILTER_ALL,
+        "marca": filters.FILTER_ALL,
+        "classificacao": filters.FILTER_ALL,
+    }
+    assert st_stub.rerun_called is True
+
+
+def test_clear_filters_button_is_primary_action(monkeypatch):
+    import filters
+
+    st_stub = _StreamlitStub()
+    monkeypatch.setattr(filters, "st", st_stub)
+    monkeypatch.setattr(filters, "load_filter_options", lambda: TestRenderSidebar()._options())
+
+    filters.render_sidebar("Vendas")
+
+    clear_button = next(call for call in st_stub.button_calls if call["label"] == "Limpar Filtros")
+    assert clear_button["type"] == "primary"
