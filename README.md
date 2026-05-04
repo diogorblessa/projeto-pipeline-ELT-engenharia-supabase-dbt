@@ -1,3 +1,5 @@
+# EM CONSTRUÇÃO - Ainda vou adicionar alguns prints, diagrama do pipeline e outros dados
+
 # Pipeline ELT — E-commerce Analytics
 
 Pipeline ELT com extracao Python (S3 -> PostgreSQL) e transformacao dbt
