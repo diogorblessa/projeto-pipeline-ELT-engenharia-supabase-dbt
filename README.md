@@ -93,11 +93,11 @@ O pipeline segue a Arquitetura Medalhão, onde cada camada tem uma responsabilid
                                             garantida.
 ```
 
-**Bronze** — Espelho exato das tabelas raw (`bronze_vendas`, `bronze_clientes`, `bronze_produtos`, `bronze_preco_competidores`). Materializado como VIEW. Nenhuma transformação — serve como contrato do dado bruto.
+**Bronze**: Espelho exato das tabelas raw (`bronze_vendas`, `bronze_clientes`, `bronze_produtos`, `bronze_preco_competidores`). Materializado como VIEW. Nenhuma transformação — serve como contrato do dado bruto.
 
-**Silver** — Limpeza, tipagem correta, deduplicação por chave natural, padronização textual (`trim`, caixa consistente, `NAO_INFORMADO` para nulos descritivos) e integridade referencial (produtos inferidos quando ausentes no catálogo). Materializado como TABLE.
+**Silver**: Limpeza, tipagem correta, deduplicação por chave natural, padronização textual (`trim`, caixa consistente, `NAO_INFORMADO` para nulos descritivos) e integridade referencial (produtos inferidos quando ausentes no catálogo). Materializado como TABLE.
 
-**Gold** — Modelo dimensional com dimensões (`gold_dim_clientes`, `gold_dim_produtos`, `gold_dim_datas`, `gold_dim_concorrentes`) e fatos (`gold_fct_vendas`, `gold_fct_precos_competidores`). Os marts finais respondem perguntas de negócio específicas por área: Sales, Customer Success e Pricing.
+**Gold**: Modelo dimensional com dimensões (`gold_dim_clientes`, `gold_dim_produtos`, `gold_dim_datas`, `gold_dim_concorrentes`) e fatos (`gold_fct_vendas`, `gold_fct_precos_competidores`). Os marts finais respondem perguntas de negócio específicas por área: Sales, Customer Success e Pricing.
 
 ---
 
@@ -137,9 +137,9 @@ Dashboard self-service com três páginas para os diretores do e-commerce, consu
 
 Agente de dados com três capacidades via Telegram:
 
-1. **Chat livre** — responde qualquer pergunta sobre o e-commerce consultando o banco em tempo real via tool use (Claude executa SQL dinamicamente).
-2. **Relatório executivo** — gera relatório para os 3 diretores (Comercial, CS, Pricing) com insights acionáveis a partir dos Data Marts Gold.
-3. **Envio automático** — envia relatórios diretamente via API HTTP sem o bot rodando, com suporte a agendamento via cron.
+1. **Chat livre**: responde qualquer pergunta sobre o e-commerce consultando o banco em tempo real via tool use (Claude executa SQL dinamicamente).
+2. **Relatório executivo**: gera relatório para os 3 diretores (Comercial, CS, Pricing) com insights acionáveis a partir dos Data Marts Gold.
+3. **Envio automático**: envia relatórios diretamente via API HTTP sem o bot rodando, com suporte a agendamento via cron.
 
 ---
 
