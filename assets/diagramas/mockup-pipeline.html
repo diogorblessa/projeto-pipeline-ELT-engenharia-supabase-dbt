@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline ELT — Mockup draw.io</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f0f0;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .canvas {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 28px 36px 24px;
+    max-width: 1160px;
+    margin: 0 auto;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+  }
+  .platform-label {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 20px;
+  }
+
+  /* ── Pipeline row ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* ── Generic layer box ── */
+  .layer {
+    border-radius: 10px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .layer-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  /* SOURCE */
+  .source {
+    background: #e8f5e9;
+    border: 2px solid #66bb6a;
+    width: 120px;
+    min-height: 120px;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .source .layer-title { color: #2e7d32; margin-bottom: 6px; }
+
+  /* EXTRACT */
+  .extract {
+    background: #e3f2fd;
+    border: 2px solid #42a5f5;
+    width: 175px;
+    flex-shrink: 0;
+  }
+  .extract .layer-title { color: #0d47a1; }
+
+  /* LOAD — agora é um bloco real */
+  .load {
+    background: #e8eaf6;
+    border: 2px solid #7986cb;
+    width: 140px;
+    min-height: 180px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .load .layer-title { color: #283593; }
+
+  /* TRANSFORM */
+  .transform {
+    background: #fff3e0;
+    border: 2px solid #ffa726;
+    flex: 1;
+    min-width: 0;
+    align-items: stretch;
+  }
+  .transform .layer-title { color: #e65100; text-align: left; }
+
+  /* CONSUMPTION */
+  .consumption {
+    background: #fce4ec;
+    border: 2px dashed #f06292;
+    width: 160px;
+    flex-shrink: 0;
+    justify-content: flex-start;
+  }
+  .consumption .layer-title { color: #880e4f; }
+
+  /* ── Arrow between layers ── */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    flex-shrink: 0;
+    gap: 2px;
+    color: #888;
+  }
+  .arrow-col .arr { font-size: 20px; line-height: 1; }
+  .arrow-col .arr-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #aaa;
+    margin-top: 2px;
+  }
+
+  /* ── Component card ── */
+  .card {
+    background: white;
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    padding: 7px 8px;
+    margin-bottom: 7px;
+    text-align: center;
+    width: 100%;
+  }
+  .card .icon { font-size: 22px; line-height: 1.2; }
+  .card .name { font-size: 11px; font-weight: 700; color: #222; margin-top: 2px; }
+  .card .sub  { font-size: 9px; color: #777; margin-top: 2px; line-height: 1.4; }
+  .card.blue   { border-color: #90caf9; background: #e3f2fd; }
+  .card.indigo { border-color: #9fa8da; background: #e8eaf6; }
+  .card.pink   { border-color: #f48fb1; background: #fce4ec; }
+  .card.purple { border-color: #ce93d8; background: #f3e5f5; }
+
+  /* file list */
+  .filelist {
+    font-size: 9px;
+    font-family: monospace;
+    color: #1565c0;
+    line-height: 1.7;
+    text-align: center;
+    margin: 4px 0 6px;
+  }
+
+  /* db cylinder SVG inline */
+  .db-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 4px;
+    display: block;
+  }
+
+  /* ── Medallion inside Transform ── */
+  .medallion {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex: 1;
+  }
+  .medal {
+    border-radius: 8px;
+    padding: 10px 8px;
+    flex: 1;
+    text-align: center;
+  }
+  .medal .medal-title {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .medal .medal-sub {
+    font-size: 9px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .medal .medal-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 3px 5px;
+    font-size: 9px;
+    color: #444;
+    margin-bottom: 3px;
+  }
+  .bronze  { background: #fbe9e7; border: 1.5px dashed #ff7043; }
+  .bronze .medal-title { color: #bf360c; }
+  .silver  { background: #eceff1; border: 1.5px dashed #78909c; }
+  .silver .medal-title { color: #37474f; }
+  .gold    { background: #fffde7; border: 1.5px dashed #f9a825; }
+  .gold .medal-title { color: #f57f17; }
+
+  .medal-arrow {
+    align-self: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #ffa726;
+    font-weight: 700;
+  }
+
+  /* marts */
+  .marts {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .mart {
+    flex: 1;
+    background: #fff9c4;
+    border: 1px solid #f9a825;
+    border-radius: 6px;
+    padding: 5px 4px;
+    text-align: center;
+  }
+  .mart .mart-area { font-size: 9px; font-weight: 800; color: #e65100; }
+  .mart .mart-name { font-size: 8px; color: #666; margin-top: 2px; line-height: 1.3; }
+
+  /* ── Legend ── */
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #555;
+  }
+  .ldot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>Mockup — Pipeline ELT (referência para draw.io)</h1>
+
+<div class="canvas">
+  <div class="platform-label">🗄️ Data Platform — Pipeline ELT E-commerce</div>
+
+  <div class="pipeline">
+
+    <!-- ① SOURCE -->
+    <div class="layer source">
+      <div class="layer-title">Data Source</div>
+      <svg class="db-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="26" cy="12" rx="18" ry="6" fill="#a5d6a7" stroke="#388e3c" stroke-width="1.5"/>
+        <rect x="8" y="12" width="36" height="24" fill="#c8e6c9" stroke="#388e3c" stroke-width="1.5"/>
+        <ellipse cx="26" cy="36" rx="18" ry="6" fill="#a5d6a7" stroke="#388e3c" stroke-width="1.5"/>
+      </svg>
+      <div style="font-size:11px;font-weight:700;color:#2e7d32">Supabase</div>
+      <div style="font-size:9px;color:#555;text-align:center;margin-top:2px">PostgreSQL<br>E-commerce</div>
+    </div>
+
+    <!-- arrow -->
+    <div class="arrow-col">
+      <div class="arr">→</div>
+    </div>
+
+    <!-- ② EXTRACT -->
+    <div class="layer extract">
+      <div class="layer-title">📥 Extract</div>
+
+      <div class="card blue">
+        <div class="icon">🐍</div>
+        <div class="name">Python + boto3</div>
+        <div class="sub">pandas</div>
+      </div>
+
+      <div style="font-size:9px;color:#555;margin-bottom:4px;text-align:center">↓ lê do S3</div>
+
+      <div class="card blue">
+        <div class="icon">🪣</div>
+        <div class="name">S3 Bucket</div>
+      </div>
+
+      <div class="filelist">
+        vendas.parquet<br>
+        clientes.parquet<br>
+        produtos.parquet<br>
+        preco_competidores.parquet
+      </div>
+    </div>
+
+    <!-- arrow -->
+    <div class="arrow-col">
+      <div class="arr">→</div>
+    </div>
+
+    <!-- ③ LOAD — bloco com cilindro DB -->
+    <div class="layer load">
+      <div class="layer-title">📦 Load</div>
+
+      <svg class="db-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="26" cy="12" rx="18" ry="6" fill="#9fa8da" stroke="#3949ab" stroke-width="1.5"/>
+        <rect x="8" y="12" width="36" height="24" fill="#c5cae9" stroke="#3949ab" stroke-width="1.5"/>
+        <ellipse cx="26" cy="36" rx="18" ry="6" fill="#9fa8da" stroke="#3949ab" stroke-width="1.5"/>
+      </svg>
+
+      <div style="font-size:11px;font-weight:700;color:#283593;margin-top:4px">PostgreSQL</div>
+      <div style="font-size:9px;color:#555;text-align:center;margin-top:4px;line-height:1.5">
+        schema: <strong>public</strong><br>
+        tabelas raw<br>
+        (SQLAlchemy)
+      </div>
+
+      <div style="font-size:9px;color:#7986cb;margin-top:8px;font-weight:600">Supabase</div>
+    </div>
+
+    <!-- arrow -->
+    <div class="arrow-col">
+      <div class="arr">→</div>
+    </div>
+
+    <!-- ④ TRANSFORM -->
+    <div class="layer transform">
+      <div class="layer-title">⚙️ Transform — dbt (Arquitetura Medalhão)</div>
+
+      <div class="medallion">
+
+        <div class="medal bronze">
+          <div class="medal-title">🟤 Bronze</div>
+          <div class="medal-sub">VIEWs — cópia fiel</div>
+          <div class="medal-item">bronze_vendas</div>
+          <div class="medal-item">bronze_clientes</div>
+          <div class="medal-item">bronze_produtos</div>
+          <div class="medal-item">bronze_preco_comp.</div>
+        </div>
+
+        <div class="medal-arrow">→</div>
+
+        <div class="medal silver">
+          <div class="medal-title">⚪ Silver</div>
+          <div class="medal-sub">TABLEs — dados limpos</div>
+          <div class="medal-item">silver_vendas</div>
+          <div class="medal-item">silver_clientes</div>
+          <div class="medal-item">silver_produtos</div>
+          <div class="medal-item">silver_preco_comp.</div>
+        </div>
+
+        <div class="medal-arrow">→</div>
+
+        <div class="medal gold">
+          <div class="medal-title">🟡 Gold</div>
+          <div class="medal-sub">TABLEs — dimensional</div>
+          <div class="medal-item">dim_clientes</div>
+          <div class="medal-item">dim_produtos</div>
+          <div class="medal-item">dim_datas</div>
+          <div class="medal-item">dim_concorrentes</div>
+          <div class="medal-item">fct_vendas</div>
+          <div class="medal-item">fct_precos_comp.</div>
+        </div>
+
+      </div>
+
+      <div class="marts">
+        <div class="mart">
+          <div class="mart-area">Sales</div>
+          <div class="mart-name">gold_sales_<br>vendas_temporais</div>
+        </div>
+        <div class="mart">
+          <div class="mart-area">CS</div>
+          <div class="mart-name">gold_cs_<br>clientes_seg.</div>
+        </div>
+        <div class="mart">
+          <div class="mart-area">Pricing</div>
+          <div class="mart-name">gold_pricing_<br>competitividade</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- arrow -->
+    <div class="arrow-col">
+      <div class="arr">→</div>
+    </div>
+
+    <!-- ⑤ CONSUMPTION -->
+    <div class="layer consumption">
+      <div class="layer-title">📊 Consumption</div>
+
+      <div class="card pink">
+        <div class="icon">📈</div>
+        <div class="name">Streamlit</div>
+        <div class="sub">Dashboard — Case 01<br>Vendas · Clientes · Pricing</div>
+      </div>
+
+      <div style="text-align:center;font-size:10px;color:#bbb;margin:6px 0">── ── ──</div>
+
+      <div class="card purple">
+        <div class="icon">🤖✈️</div>
+        <div class="name">Claude API + Telegram</div>
+        <div class="sub">Agente — Case 02</div>
+      </div>
+
+      <div style="text-align:center;font-size:9px;color:#c62828;margin-top:8px;font-weight:700">
+        🚧 Em construção
+      </div>
+    </div>
+
+  </div><!-- end pipeline -->
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="ldot" style="background:#90caf9;border:1px solid #42a5f5"></div>Extract</div>
+    <div class="legend-item"><div class="ldot" style="background:#9fa8da;border:1px solid #7986cb"></div>Load — PostgreSQL (Data Warehouse)</div>
+    <div class="legend-item"><div class="ldot" style="background:#ffcc80;border:1px solid #ffa726"></div>Transform — dbt</div>
+    <div class="legend-item"><div class="ldot" style="background:#f48fb1;border:1px solid #f06292"></div>Consumption</div>
+  </div>
+</div>
+
+</body>
+</html>
