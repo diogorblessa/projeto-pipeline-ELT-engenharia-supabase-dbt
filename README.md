@@ -8,6 +8,8 @@ Sobre os dados brutos, foram construídas duas aplicações analíticas como cas
 
 Projeto de portfólio/aprendizado que cobre engenharia de dados, modelagem dimensional e consumo analítico real.
 
+![Diagrama da Arquitetura do Pipeline](assets/diagramas/diagrama-pipeline-elt-ecommerce.svg)
+
 ---
 
 ## 🎯 Objetivos de Aprendizado
