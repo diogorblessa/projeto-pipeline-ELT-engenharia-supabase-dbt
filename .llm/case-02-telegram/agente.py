@@ -280,3 +280,64 @@ def gerar_relatorio(settings: Settings) -> str:
     arquivo.write_text(relatorio, encoding="utf-8")
     log.info("Relatório salvo em: %s", arquivo.name)
     return relatorio
+
+
+# ── Envio Telegram via API HTTP ──────────────────────────────────────
+
+
+def _split_telegram(texto: str, max_len: int = TELEGRAM_MAX_CHARS) -> list[str]:
+    return [texto[i : i + max_len] for i in range(0, len(texto), max_len)]
+
+
+def _enviar_parte(token: str, chat_id: str, texto: str) -> bool:
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    for parse_mode in ("Markdown", None):
+        payload = {"chat_id": chat_id, "text": texto}
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
+        data = urllib.parse.urlencode(payload).encode()
+        req = urllib.request.Request(url, data=data, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+                if resp.status == 200:
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def enviar_telegram(
+    texto: str,
+    settings: Settings,
+    chat_id: str | None = None,
+) -> None:
+    destino = chat_id or settings.chat_id
+    if not destino:
+        log.warning("CHAT_ID não configurado. Inicie o bot e envie /start primeiro.")
+        return
+
+    token = settings.telegram.get_secret_value()
+    sucesso_total = True
+    for parte in _split_telegram(texto):
+        if not _enviar_parte(token, destino, parte):
+            log.error("Falha ao enviar parte da mensagem.")
+            sucesso_total = False
+
+    if sucesso_total:
+        log.info("Mensagem enviada para chat_id=%s", destino)
+
+
+# ── Main standalone ──────────────────────────────────────────────────
+
+
+if __name__ == "__main__":
+    settings = Settings()
+    relatorio = gerar_relatorio(settings)
+    print(relatorio)
+    if settings.chat_id:
+        enviar_telegram(relatorio, settings)
+    else:
+        log.warning(
+            "CHAT_ID ausente — relatório salvo em .md mas não enviado. "
+            "Rode bot.py e envie /start no Telegram para registrar."
+        )
