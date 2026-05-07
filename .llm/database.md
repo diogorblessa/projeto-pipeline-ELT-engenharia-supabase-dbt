@@ -94,7 +94,7 @@ Fornecer métricas de vendas agregadas por dimensão temporal (dia, semana, hora
 | `ano_venda` | `INTEGER` | NOT NULL | Ano extraído da data (ex: 2025) |
 | `mes_venda` | `INTEGER` | NOT NULL | Mês extraído da data (1-12) |
 | `dia_venda` | `INTEGER` | NOT NULL | Dia do mês (1-31) |
-| `dia_semana_nome` | `VARCHAR` | NOT NULL | Nome do dia da semana em português (Domingo, Segunda, ..., Sábado) |
+| `dia_da_semana` | `VARCHAR` | NOT NULL | Nome do dia da semana em português (Domingo, Segunda, ..., Sábado) |
 | `hora_venda` | `INTEGER` | NOT NULL | Hora da venda (0-23) |
 | `receita_total` | `NUMERIC` | NOT NULL | Soma da receita total (quantidade × preço unitário) no período |
 | `quantidade_total` | `INTEGER` | NOT NULL | Soma das quantidades vendidas no período |
@@ -106,8 +106,8 @@ Fornecer métricas de vendas agregadas por dimensão temporal (dia, semana, hora
 
 - `receita_total` = SUM de (`quantidade` × `preco_unitario`) já calculado na silver como `receita_total`
 - `ticket_medio` = AVG da receita por transação individual (não é receita_total / total_vendas)
-- `dia_semana_nome` mapeado de EXTRACT(DOW): 0=Domingo, 1=Segunda, ..., 6=Sábado
-- Agrupamento por: `data_venda_date`, `ano_venda`, `mes_venda`, `dia_venda`, `dia_semana_nome`, `hora_venda`
+- `dia_da_semana` mapeado de EXTRACT(DOW): 0=Domingo, 1=Segunda, ..., 6=Sábado
+- Agrupamento por: `data_venda_date`, `ano_venda`, `mes_venda`, `dia_venda`, `dia_da_semana`, `hora_venda`
 - Ordenação: `data_venda DESC`, `hora_venda ASC`
 
 ### SQL de origem
@@ -126,7 +126,7 @@ SELECT
         WHEN 4 THEN 'Quinta'
         WHEN 5 THEN 'Sexta'
         WHEN 6 THEN 'Sábado'
-    END AS dia_semana_nome,
+    END AS dia_da_semana,
     v.hora_venda,
     SUM(v.receita_total) AS receita_total,
     SUM(v.quantidade) AS quantidade_total,
@@ -140,7 +140,7 @@ ORDER BY data_venda DESC, v.hora_venda
 
 ### Sample Data
 
-| data_venda | ano_venda | mes_venda | dia_venda | dia_semana_nome | hora_venda | receita_total | quantidade_total | total_vendas | total_clientes_unicos | ticket_medio |
+| data_venda | ano_venda | mes_venda | dia_venda | dia_da_semana | hora_venda | receita_total | quantidade_total | total_vendas | total_clientes_unicos | ticket_medio |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2025-12-13 | 2025 | 12 | 13 | Sábado | 17 | 1006.00 | 6 | 3 | 3 | 335.33 |
 | 2025-12-13 | 2025 | 12 | 13 | Sábado | 10 | 89.50 | 1 | 1 | 1 | 89.50 |
@@ -151,13 +151,13 @@ ORDER BY data_venda DESC, v.hora_venda
 ### Perguntas de negócio que esta tabela responde
 
 1. **Qual a receita total por dia/semana/mês?** → Agrupar `receita_total` por `data_venda`, `mes_venda` ou `ano_venda`
-2. **Qual o dia da semana com maior volume de vendas?** → Agrupar por `dia_semana_nome`, somar `total_vendas`
+2. **Qual o dia da semana com maior volume de vendas?** → Agrupar por `dia_da_semana`, somar `total_vendas`
 3. **Qual o horário de pico de vendas?** → Agrupar por `hora_venda`, somar `receita_total`
 4. **Qual a evolução do ticket médio ao longo do tempo?** → Média ponderada de `ticket_medio` por `data_venda`
 5. **Quantos clientes únicos compram por dia?** → Usar `total_clientes_unicos` por `data_venda`
 6. **Existe sazonalidade nas vendas?** → Comparar `receita_total` por `mes_venda` entre anos
 7. **Qual a tendência de crescimento de vendas?** → Série temporal de `receita_total` por `data_venda`
-8. **Qual o volume de vendas nos finais de semana vs dias úteis?** → Filtrar `dia_semana_nome` IN ('Sábado', 'Domingo') vs demais
+8. **Qual o volume de vendas nos finais de semana vs dias úteis?** → Filtrar `dia_da_semana` IN ('Sábado', 'Domingo') vs demais
 
 ### Queries prontas para dashboards
 
@@ -181,7 +181,7 @@ LIMIT 5;
 
 -- Comparação dias úteis vs fins de semana
 SELECT
-    CASE WHEN dia_semana_nome IN ('Sábado', 'Domingo') THEN 'Fim de Semana' ELSE 'Dia Útil' END AS tipo_dia,
+    CASE WHEN dia_da_semana IN ('Sábado', 'Domingo') THEN 'Fim de Semana' ELSE 'Dia Útil' END AS tipo_dia,
     SUM(receita_total) AS receita,
     AVG(ticket_medio) AS ticket_medio
 FROM public_gold_sales.gold_sales_vendas_temporais
