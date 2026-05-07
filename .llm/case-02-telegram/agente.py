@@ -10,10 +10,9 @@ from pathlib import Path
 
 import anthropic
 import pandas as pd
+from db import execute_query
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from db import execute_query
 
 # ── Settings ─────────────────────────────────────────────────────────
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -65,7 +64,8 @@ Tabelas disponíveis no banco PostgreSQL:
             preco_medio_concorrentes, preco_minimo_concorrentes, preco_maximo_concorrentes,
             total_concorrentes, diferenca_percentual_vs_media (NUMERIC),
             diferenca_percentual_vs_minimo (NUMERIC),
-            classificacao_preco (MAIS_CARO_QUE_TODOS | ACIMA_DA_MEDIA | NA_MEDIA | ABAIXO_DA_MEDIA | MAIS_BARATO_QUE_TODOS),
+            classificacao_preco (MAIS_CARO_QUE_TODOS | ACIMA_DA_MEDIA | NA_MEDIA |
+                                 ABAIXO_DA_MEDIA | MAIS_BARATO_QUE_TODOS),
             receita_total (NUMERIC), quantidade_total
 """
 
@@ -159,8 +159,7 @@ def chat(pergunta: str, settings: Settings) -> str:
         "Responda perguntas usando os dados do banco PostgreSQL.\n"
         "Use a ferramenta executar_sql para consultar os dados necessários.\n"
         "Formate valores monetários em R$. Responda em português.\n"
-        "Seja conciso e direto.\n\n"
-        + SCHEMA
+        "Seja conciso e direto.\n\n" + SCHEMA
     )
 
     messages = [{"role": "user", "content": pergunta}]
@@ -296,13 +295,13 @@ def _enviar_parte(token: str, chat_id: str, texto: str) -> bool:
         if parse_mode:
             payload["parse_mode"] = parse_mode
         data = urllib.parse.urlencode(payload).encode()
-        req = urllib.request.Request(url, data=data, method="POST")
+        req = urllib.request.Request(url, data=data, method="POST")  # noqa: S310
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 if resp.status == 200:
                     return True
-        except Exception:
-            continue
+        except Exception as e:
+            log.debug("Falha ao enviar parte (parse_mode=%s): %s", parse_mode, e)
     return False
 
 

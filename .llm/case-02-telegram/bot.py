@@ -6,6 +6,13 @@ import logging
 import re
 from pathlib import Path
 
+from agente import (
+    ENV_PATH,
+    Settings,
+    chat,
+    enviar_telegram,
+    gerar_relatorio,
+)
 from telegram import Update
 from telegram.constants import ChatAction
 from telegram.ext import (
@@ -14,14 +21,6 @@ from telegram.ext import (
     ContextTypes,
     MessageHandler,
     filters,
-)
-
-from agente import (
-    ENV_PATH,
-    Settings,
-    chat,
-    enviar_telegram,
-    gerar_relatorio,
 )
 
 log = logging.getLogger(__name__)
@@ -39,10 +38,7 @@ def salvar_chat_id(chat_id: int, env_path: Path = ENV_PATH) -> None:
     nova_linha = f"CHAT_ID={chat_id_str}"
 
     try:
-        if env_path.exists():
-            conteudo = env_path.read_text(encoding="utf-8")
-        else:
-            conteudo = ""
+        conteudo = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
 
         if _CHAT_ID_RE.search(conteudo):
             atual = _CHAT_ID_RE.search(conteudo).group(0)
