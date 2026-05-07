@@ -36,7 +36,7 @@ logs/
 .idea/
 *.swp
 docs/*
-!docs/superpowers/
+docs/
 
 # Git worktrees (isolated workspaces)
 .worktrees/
