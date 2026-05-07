@@ -160,13 +160,13 @@ Seja conciso e direto.
 **Query 1 — Resumo de Vendas (últimos 7 dias):**
 
 ```sql
-SELECT data_venda, dia_semana_nome,
+SELECT data_venda, dia_da_semana,
     SUM(receita_total) AS receita,
     SUM(total_vendas) AS vendas,
     SUM(total_clientes_unicos) AS clientes,
     AVG(ticket_medio) AS ticket_medio
 FROM public_gold_sales.gold_sales_vendas_temporais
-GROUP BY data_venda, dia_semana_nome
+GROUP BY data_venda, dia_da_semana
 ORDER BY data_venda DESC
 LIMIT 7
 ```
