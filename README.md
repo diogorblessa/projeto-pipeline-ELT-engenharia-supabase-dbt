@@ -52,7 +52,11 @@ projeto-pipeline-ELT-engenharia-supabase-dbt/
 │   │   ├── db.py
 │   │   ├── filters.py
 │   │   └── tests/
-│   └── case-02-telegram/            # Case 02: Agente Telegram + Claude API (em construção)
+│   └── case-02-telegram/            # Case 02: Agente Telegram + Claude API
+│       ├── agente.py                # Settings + chat (tool use) + relatório + envio HTTP + main standalone
+│       ├── bot.py                   # Handlers do bot (polling) + persistência do CHAT_ID
+│       ├── db.py                    # Engine + execute_query (SELECT/WITH only)
+│       ├── requirements.txt
 │       └── PRD-agente-relatorios.md
 │
 ├── assets/
@@ -133,13 +137,32 @@ Dashboard self-service com três páginas para os diretores do e-commerce, consu
 
 ### Case 02 — Agente Telegram + Claude API
 
-> 🚧 **Em construção**
-
 Agente de dados com três capacidades via Telegram:
 
 1. **Chat livre**: responde qualquer pergunta sobre o e-commerce consultando o banco em tempo real via tool use (Claude executa SQL dinamicamente).
 2. **Relatório executivo**: gera relatório para os 3 diretores (Comercial, CS, Pricing) com insights acionáveis a partir dos Data Marts Gold.
 3. **Envio automático**: envia relatórios diretamente via API HTTP sem o bot rodando, com suporte a agendamento via cron.
+
+**Modos de execução**
+
+| Modo | Comando | Bot precisa estar rodando? | Uso |
+|---|---|---|---|
+| Interativo | `python bot.py` | Sim (polling) | Chat livre + `/relatorio` sob demanda |
+| Standalone | `python agente.py` | Não | Gera relatório + envia via API HTTP (cron-friendly) |
+
+**Segurança:** todas as credenciais (`TELEGRAM`, `ANTHROPIC_API_KEY`, `POSTGRES_URL`) carregadas do `.env` da raiz via pydantic-settings com `SecretStr` — nenhum valor hardcoded e nenhum segredo aparece em logs. O `CHAT_ID` é auto-registrado no `.env` na primeira interação com o bot.
+
+**Conversa com o agente**
+
+![Agente Telegram 1](assets/agente-telegram/01.jpg)
+
+![Agente Telegram 2](assets/agente-telegram/02.jpg)
+
+![Agente Telegram 3](assets/agente-telegram/03.jpg)
+
+![Agente Telegram 4](assets/agente-telegram/04.jpg)
+
+![Agente Telegram 5](assets/agente-telegram/05.jpg)
 
 ---
 
@@ -219,6 +242,22 @@ docker compose run --rm dbt test
 cd .llm/case-01-dashboard
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+### Agente Telegram — Case 02
+
+Pré-requisitos no `.env` da raiz: `TELEGRAM` (token do @BotFather), `ANTHROPIC_API_KEY` (console.anthropic.com) e `POSTGRES_URL`. Ver `.env.example` para os placeholders.
+
+```bash
+cd .llm/case-02-telegram
+pip install -r requirements.txt
+
+# Modo interativo (chat + /relatorio sob demanda)
+python bot.py
+# No Telegram, mande /start uma vez para registrar o CHAT_ID
+
+# Modo standalone (gera relatório + envia automaticamente)
+python agente.py
 ```
 
 ---
