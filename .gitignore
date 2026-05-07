@@ -19,6 +19,9 @@ __pycache__/
 *.pem
 *.key
 
+# Case 02 — relatórios gerados
+.llm/case-02-telegram/relatorio_*.md
+
 # dbt
 target/
 dbt_packages/
