@@ -21,6 +21,7 @@ __pycache__/
 
 # Case 02 — relatórios gerados
 .llm/case-02-telegram/relatorio_*.md
+assets/diagramas/mockup-pipeline.html
 
 # dbt
 target/
