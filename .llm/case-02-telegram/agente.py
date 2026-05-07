@@ -126,3 +126,67 @@ QUERIES_RELATORIO: dict[str, str] = {
         LIMIT 10
     """,
 }
+
+
+# ── Helpers de tool use ──────────────────────────────────────────────
+
+
+def _executar_tool_call(block, settings: Settings) -> dict:
+    """Executa um tool_use block e retorna o tool_result correspondente."""
+    try:
+        df = execute_query(block.input["sql"], settings.postgres_url)
+        resultado = df.to_markdown(index=False) if not df.empty else "Sem resultados."
+    except Exception as e:
+        resultado = f"Erro ao executar SQL: {e}"
+
+    return {
+        "type": "tool_result",
+        "tool_use_id": block.id,
+        "content": resultado,
+    }
+
+
+# ── Chat livre ───────────────────────────────────────────────────────
+
+
+def chat(pergunta: str, settings: Settings) -> str:
+    log.info("Chat recebido: %s", pergunta[:80])
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key.get_secret_value())
+
+    system = (
+        "Você é um analista de dados de um e-commerce brasileiro.\n"
+        "Responda perguntas usando os dados do banco PostgreSQL.\n"
+        "Use a ferramenta executar_sql para consultar os dados necessários.\n"
+        "Formate valores monetários em R$. Responda em português.\n"
+        "Seja conciso e direto.\n\n"
+        + SCHEMA
+    )
+
+    messages = [{"role": "user", "content": pergunta}]
+
+    for _ in range(MAX_ITERACOES_TOOL):
+        response = client.messages.create(
+            model=settings.anthropic_model,
+            max_tokens=2048,
+            system=system,
+            tools=[TOOL],
+            messages=messages,
+        )
+
+        if response.stop_reason == "end_turn":
+            for block in response.content:
+                if hasattr(block, "text"):
+                    return block.text
+            return "Não consegui gerar uma resposta."
+
+        if response.stop_reason == "tool_use":
+            messages.append({"role": "assistant", "content": response.content})
+            tool_results = [
+                _executar_tool_call(block, settings)
+                for block in response.content
+                if block.type == "tool_use" and block.name == "executar_sql"
+            ]
+            messages.append({"role": "user", "content": tool_results})
+
+    return "Limite de iterações atingido. Tente reformular a pergunta."
